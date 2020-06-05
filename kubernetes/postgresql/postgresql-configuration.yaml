@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+  labels:
+    app: postgresql
+data:
+  POSTGRES_PASSWORD: Cisco0
+  POSTGRES_USER: lukas
+  POSTGRES_DB: timetable
