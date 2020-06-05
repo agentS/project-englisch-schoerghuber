@@ -1,0 +1,13 @@
+{
+  "properties": [
+    {
+      "name": "timetable.url",
+      "type": "java.lang.String",
+      "description": "URL of the timetable service"
+    },
+    {
+      "name": "bookingstatusupdate.interval",
+      "type": "java.lang.String",
+      "description": "Description for bookingstatusupdate.interval."
+    }
+  ] }
