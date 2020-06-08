@@ -6,14 +6,14 @@ spring:
     gateway:
       routes:
       - id: timetable
-        uri: http://localhost:8082/
+        uri: http://timetable:8082/
         predicates:
         - Path=/timetable/**
         filters:
         - StripPrefix=1
         - CircuitBreaker=timetableCircuitBreaker
       - id: timetable
-        uri: http://localhost:8084/
+        uri: http://booking-service:8084/
         predicates:
         - Path=/booking/**
         filters:
@@ -29,5 +29,5 @@ spring:
 opentracing:
   jaeger:
     udp-sender:
-      host: localhost
+      host: jaeger-service-spring
       port: 6831
