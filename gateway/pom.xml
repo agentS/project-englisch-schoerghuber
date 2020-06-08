@@ -17,6 +17,7 @@
 	<properties>
 		<java.version>11</java.version>
 		<spring-cloud.version>Hoxton.SR5</spring-cloud.version>
+		<springdoc.version>1.4.0</springdoc.version>
 	</properties>
 
 	<dependencies>
@@ -61,13 +62,16 @@
 			<artifactId>lombok</artifactId>
 			<optional>true</optional>
 		</dependency>
-		<!--
 		<dependency>
 			<groupId>org.springdoc</groupId>
-			<artifactId>springdoc-openapi-ui</artifactId>
-			<version>1.4.0</version>
+			<artifactId>springdoc-openapi-webflux-core</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
-		-->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-webflux-ui</artifactId>
+			<version>${springdoc.version}</version>
+		</dependency>
 		<dependency>
 			<groupId>io.opentracing.contrib</groupId>
 			<artifactId>opentracing-spring-jaeger-cloud-starter</artifactId>

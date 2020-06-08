@@ -23,22 +23,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 
-@OpenAPIDefinition(
-        info = @Info(
-                title = "Booking API",
-                version = "0.0.0",
-                contact = @Contact(
-                        name = "Lukas Schoerghuber",
-                        email = "lukas.schoerghuber@posteo.at"
-                ),
-                license = @License(
-                        name = "GPLv3",
-                        url = "https://www.gnu.org/licenses/gpl-3.0.en.html"
-                )
-        ),
-        servers = @Server(url = "http://127.0.0.1:8084", description = "Booking API development server"),
-        tags = @Tag(name = BookingEndpoint.OPEN_API_TAG_NAME_BOOKING, description = "Booking-related endpoints")
-)
 @RestController
 public class BookingEndpoint {
     public static final String OPEN_API_TAG_NAME_BOOKING = "booking";
