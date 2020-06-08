@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-service-quarkus
+spec:
+  ports:
+  - port: 14268
+    targetPort: 14268
+  selector:
+    app: jaeger
