@@ -12,20 +12,19 @@ spring:
         filters:
         - StripPrefix=1
         - CircuitBreaker=timetableCircuitBreaker
-      - id: timetable
+      - id: booking
         uri: http://localhost:8084/
         predicates:
         - Path=/booking/**
         filters:
         - StripPrefix=1
         - CircuitBreaker=bookingCircuitBreaker
-      # see https://github.com/springdoc/springdoc-openapi/issues/717
       - id: openAPI
         uri: http://localhost:${server.port}/
         predicates:
         - Path=/v3/api-docs/**
         filters:
-        - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
+        - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs/
 opentracing:
   jaeger:
     udp-sender:
