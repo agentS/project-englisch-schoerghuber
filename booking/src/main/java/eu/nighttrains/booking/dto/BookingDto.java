@@ -2,7 +2,10 @@ package eu.nighttrains.booking.dto;
 
 import eu.nighttrains.booking.model.BookingStatus;
 import eu.nighttrains.timetable.model.TrainCarType;
+import io.swagger.v3.oas.annotations.media.Schema;
 
+import javax.validation.Valid;
+import javax.validation.constraints.PositiveOrZero;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -10,14 +13,36 @@ import java.util.List;
 import java.util.Set;
 
 public final class BookingDto {
+
+    //@NotNull
+    @Schema(required = true)
     private String id;
+
+    @PositiveOrZero
+    @Schema(required = true)
     private long departureStationId;
+
+    @PositiveOrZero
+    @Schema(required = true)
     private long arrivalStationId;
+
+    @Schema(required = true)
     private LocalDate departureDate;
+
+    //@NotNull
+    @Schema(required = true)
     private TrainCarType trainCarType;
+
+    //@NotNull
+    @Schema(required = true)
     private BookingStatus status;
-    private List<TicketDto> tickets;
+
+    private List<@Valid TicketDto> tickets;
+
+    @Schema(required = true)
     private String emailAddress;
+
+    private List<@Valid TicketDto> tickets;
 
     public BookingDto(String id, long departureStationId, long arrivalStationId, LocalDate departureDate, TrainCarType trainCarType, BookingStatus status, String emailAddress, List<TicketDto> tickets) {
         this.id = id;
