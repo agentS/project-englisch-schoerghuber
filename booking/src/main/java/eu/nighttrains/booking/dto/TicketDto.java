@@ -1,16 +1,36 @@
 package eu.nighttrains.booking.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import javax.validation.constraints.PositiveOrZero;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Set;
 
 public final class TicketDto {
+
+    @PositiveOrZero
+    @Schema(required = true)
     private long departureStationId;
+
+    @PositiveOrZero
+    @Schema(required = true)
     private long arrivalStationId;
+
+    @PositiveOrZero
+    @Schema(required = true)
     private long trainCarId;
+
+    @PositiveOrZero
+    @Schema(required = true)
     private int placeNumber;
+
+    @Schema(required = true)
     private LocalDate departureDate;
+
+    @PositiveOrZero
+    @Schema(required = true)
     private Long trainConnectionId;
+
     private Set<Long> departureStationIds;
 
     public TicketDto(long departureStationId, long arrivalStationId, long trainCarId, int placeNumber, LocalDate departureDate, Long trainConnectionId, Set<Long> departureStationIds) {
