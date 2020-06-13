@@ -34,7 +34,7 @@ public class BookingServiceCircuitBreakerTest {
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY);
 
 		assertDoesNotThrow(() -> {
-			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 10), TrainCarType.SLEEPER);
+			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 10), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 			assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
 		});
 	}
@@ -64,14 +64,14 @@ public class BookingServiceCircuitBreakerTest {
 		this.mockRailwayConnectionLookup(CircuitBreakerTestConfig.CRITICAL_DELAY);
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY);
 		assertDoesNotThrow(() -> {
-			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 10), TrainCarType.SLEEPER);
+			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 10), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 			assertEquals(BookingStatus.RESERVED, booking.getStatus());
 		});
 
 		this.mockRailwayConnectionLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY);
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.CRITICAL_DELAY);
 		assertDoesNotThrow(() -> {
-			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 10), TrainCarType.SLEEPER);
+			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 10), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 			assertEquals(BookingStatus.RESERVED, booking.getStatus());
 		});
 	}
@@ -82,7 +82,7 @@ public class BookingServiceCircuitBreakerTest {
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY);
 		assertDoesNotThrow(() -> {
 			for (int index = 0; index < 10; ++index) {
-				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 11), TrainCarType.SLEEPER);
+				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 11), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 				assertEquals(BookingStatus.RESERVED, booking.getStatus());
 			}
 		});
@@ -91,7 +91,7 @@ public class BookingServiceCircuitBreakerTest {
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.CRITICAL_DELAY);
 		assertDoesNotThrow(() -> {
 			for (int index = 0; index < 10; ++index) {
-				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 12), TrainCarType.SLEEPER);
+				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 12), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 				assertEquals(BookingStatus.RESERVED, booking.getStatus());
 			}
 		});
@@ -99,7 +99,7 @@ public class BookingServiceCircuitBreakerTest {
 		this.mockRailwayConnectionLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY);
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY);
 		assertDoesNotThrow(() -> {
-			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 13), TrainCarType.SLEEPER);
+			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 13), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 			assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
 		});
 	}
@@ -110,7 +110,7 @@ public class BookingServiceCircuitBreakerTest {
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY);
 		assertDoesNotThrow(() -> {
 			for (int index = 0; index < 5; ++index) {
-				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 17), TrainCarType.SLEEPER);
+				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 17), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 				assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
 			}
 		});
@@ -119,7 +119,7 @@ public class BookingServiceCircuitBreakerTest {
 		List<String> bookingIds = new ArrayList<>();
 		assertDoesNotThrow(() -> {
 			for (int index = 0; index < 5; ++index) {
-				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 17), TrainCarType.SLEEPER);
+				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 17), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 				assertEquals(BookingStatus.RESERVED, booking.getStatus());
 				bookingIds.add(booking.getId());
 			}

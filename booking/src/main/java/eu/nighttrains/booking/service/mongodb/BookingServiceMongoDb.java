@@ -30,6 +30,7 @@ public class BookingServiceMongoDb implements BookingService {
                 booking.getDepartureDate(),
                 booking.getTrainCarType(),
                 booking.getStatus(),
+                booking.getEmailAddress(),
                 booking.getTickets().stream()
                     .map(BookingServiceMongoDb::mapTicket)
                     .collect(Collectors.toList())
@@ -66,13 +67,25 @@ public class BookingServiceMongoDb implements BookingService {
     }
 
     @Override
+    public BookingDto findById(String id, String emailAddress)
+            throws BookingNotFoundException, UnauthorizedBookingAccess {
+        BookingDto booking = this.findById(id);
+        if (Objects.equals(emailAddress, booking.getEmailAddress())) {
+            return booking;
+        } else {
+            throw new UnauthorizedBookingAccess("User with email address " + emailAddress + " is not authorized to access booking.");
+        }
+    }
+
+    @Override
     public BookingDto book(
             final long departureStationId, final long arrivalStationId,
             LocalDate departureDate,
-            TrainCarType trainCarType
+            TrainCarType trainCarType,
+            String emailAddress
     ) {
         Booking addedBooking = new Booking(
-                departureStationId, arrivalStationId, departureDate, trainCarType,
+                departureStationId, arrivalStationId, departureDate, trainCarType, emailAddress,
                 BookingStatus.RESERVED, new ArrayList<>()
         );
         try {

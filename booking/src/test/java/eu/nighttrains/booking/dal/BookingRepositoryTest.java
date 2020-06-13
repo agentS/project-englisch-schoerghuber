@@ -16,6 +16,8 @@ import java.util.stream.LongStream;
 
 @DataMongoTest
 class BookingRepositoryTest {
+	private static final String EMAIL_ADDRESS = "S1910454033@students.fh-hagenberg.at";
+
 	@Autowired
 	private BookingRepository bookingRepository;
 
@@ -33,6 +35,7 @@ class BookingRepositoryTest {
 				14L, 0L,
 				LocalDate.of(2020, 5, 29),
 				TrainCarType.SLEEPER,
+				EMAIL_ADDRESS,
 				BookingStatus.CONFIRMED,
 				tickets
 		));
@@ -49,6 +52,7 @@ class BookingRepositoryTest {
 				0L, 14L,
 				LocalDate.of(2020, 5, 29),
 				TrainCarType.SLEEPER,
+				EMAIL_ADDRESS,
 				BookingStatus.CONFIRMED,
 				tickets
 		));
@@ -65,6 +69,7 @@ class BookingRepositoryTest {
 				2L, 10L,
 				LocalDate.of(2020, 5, 29),
 				TrainCarType.SLEEPER,
+				EMAIL_ADDRESS,
 				BookingStatus.CONFIRMED,
 				tickets
 		));
@@ -122,6 +127,7 @@ class BookingRepositoryTest {
 				14L, 0L,
 				LocalDate.of(2020, 5, 29),
 				TrainCarType.COUCHETTE,
+				EMAIL_ADDRESS,
 				BookingStatus.RESERVED,
 				tickets
 		));
@@ -138,6 +144,7 @@ class BookingRepositoryTest {
 				14L, 0L,
 				LocalDate.of(2020, 5, 29),
 				TrainCarType.COUCHETTE,
+				EMAIL_ADDRESS,
 				BookingStatus.CONFIRMED,
 				tickets
 		));

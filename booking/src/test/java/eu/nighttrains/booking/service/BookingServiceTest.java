@@ -33,7 +33,7 @@ class BookingServiceTest {
 				.thenReturn(TimeTableMockJsonDataMapper.readTrainCarsForConnection(0L));
 
 		assertDoesNotThrow(() -> {
-			BookingDto addedBooking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 29), TrainCarType.SLEEPER);
+			BookingDto addedBooking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 29), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 			assertNotNull(addedBooking);
 			assertNotNull(addedBooking.getId());
 			assertNotEquals("", addedBooking.getId());
@@ -64,7 +64,7 @@ class BookingServiceTest {
 				.thenReturn(TimeTableMockJsonDataMapper.readTrainCarsForConnection(3L));
 
 		assertDoesNotThrow(() -> {
-			BookingDto addedBooking = this.bookingService.book(28, 14, LocalDate.of(2020, 5, 30), TrainCarType.SLEEPER);
+			BookingDto addedBooking = this.bookingService.book(28, 14, LocalDate.of(2020, 5, 30), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 			assertNotNull(addedBooking);
 			assertNotNull(addedBooking.getId());
 			assertNotEquals("", addedBooking.getId());
@@ -100,16 +100,16 @@ class BookingServiceTest {
 
 		assertDoesNotThrow(() -> {
 			for (int index = 0; index < 40; ++index) {
-				BookingDto booking = this.bookingService.book(2, 13, LocalDate.of(2020, 5, 20), TrainCarType.SLEEPER);
+				BookingDto booking = this.bookingService.book(2, 13, LocalDate.of(2020, 5, 20), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 				assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
 			}
 		});
 
-		BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 20), TrainCarType.SLEEPER);
+		BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 20), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 		assertEquals(BookingStatus.REJECTED, booking.getStatus());
 
 		assertDoesNotThrow(() -> {
-			this.bookingService.book(28, 0, LocalDate.of(2020, 5, 20), TrainCarType.SLEEPER);
+			this.bookingService.book(28, 0, LocalDate.of(2020, 5, 20), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 		});
 	}
 
@@ -118,7 +118,19 @@ class BookingServiceTest {
 		Mockito.when(this.timeTableRestClient.getRailwayConnections(0L, -20L))
 				.thenThrow(new NoConnectionsAvailableException());
 		assertThrows(NoConnectionsAvailableException.class, () -> {
-			this.bookingService.book(0, -20, LocalDate.of(2020, 5, 31), TrainCarType.SLEEPER);
+			this.bookingService.book(0, -20, LocalDate.of(2020, 5, 31), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
+		});
+	}
+
+	@Test
+	void testBookingAuthorization() {
+		assertDoesNotThrow(() -> {
+			final BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 6, 13), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
+			final BookingDto lookedUpBooking = this.bookingService.findById(booking.getId(), IntegrationTestConstants.EMAIL_ADDRESS);
+			assertEquals(booking.getEmailAddress(), lookedUpBooking.getEmailAddress());
+			assertThrows(UnauthorizedBookingAccess.class, () -> {
+				this.bookingService.findById(booking.getId(), "homer.simpson@burnspowerplant.com");
+			});
 		});
 	}
 }
