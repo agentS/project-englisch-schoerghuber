@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.nighttrains.booking.dal.BookingRepository;
 import eu.nighttrains.booking.model.Booking;
+import eu.nighttrains.booking.notification.BookingNotificationPublisher;
 import eu.nighttrains.booking.service.*;
 import eu.nighttrains.booking.dto.BookingDto;
 import eu.nighttrains.booking.dto.TicketDto;
@@ -57,42 +58,16 @@ public class BookingServiceMongoDb implements BookingService {
 
     private final BookingRepository bookingRepository;
     private final TimeTableService timeTableClient;
-    private final RabbitTemplate rabbitTemplate;
-
-    private final String exchangeName;
-    private final String routingKeyConfirmed;
-    private final String routingKeyReserved;
-    private final String routingKeyRejected;
-
-    private final Jackson2JsonMessageConverter amqpMessageConverter;
+    private final BookingNotificationPublisher bookingNotificationPublisher;
 
     public BookingServiceMongoDb(
             @Autowired BookingRepository bookingRepository,
             @Autowired TimeTableService timeTableClient,
-            @Autowired RabbitTemplate rabbitTemplate,
-            @Value("${bookingstatusupdates.exchange-name}") String exchangeName,
-            @Value("${bookingstatusupdates.routingkey.confirmed}") String routingKeyConfirmed,
-            @Value("${bookingstatusupdates.routingkey.reserved}") String routingKeyReserved,
-            @Value("${bookingstatusupdates.routingkey.rejected}") String routingKeyRejected
+            @Autowired BookingNotificationPublisher bookingNotificationPublisher
     ) {
         this.bookingRepository = bookingRepository;
         this.timeTableClient = timeTableClient;
-        this.rabbitTemplate = rabbitTemplate;
-        this.exchangeName = exchangeName;
-        this.routingKeyConfirmed = routingKeyConfirmed;
-        this.routingKeyReserved = routingKeyReserved;
-        this.routingKeyRejected = routingKeyRejected;
-
-        ObjectMapper jsonMapper = new ObjectMapper();
-        jsonMapper.registerModule(new JavaTimeModule());
-        this.amqpMessageConverter = new Jackson2JsonMessageConverter(jsonMapper);
-    }
-
-    private Message serializeBooking(Booking booking) {
-        return this.amqpMessageConverter.toMessage(
-                booking,
-                new MessageProperties()
-        );
+        this.bookingNotificationPublisher = bookingNotificationPublisher;
     }
 
     @Override
@@ -127,20 +102,13 @@ public class BookingServiceMongoDb implements BookingService {
         String routingKey;
         try {
             this.tryToBookTickets(addedBooking, trainCarType);
-            routingKey = this.routingKeyConfirmed;
         } catch (TimeTableServiceNotAvailableException exception) {
             addedBooking.setStatus(BookingStatus.RESERVED);
-            routingKey = this.routingKeyReserved;
         } catch (NoTrainCarAvailableException exception) {
             addedBooking.setStatus(BookingStatus.REJECTED);
-            routingKey = this.routingKeyRejected;
         }
         addedBooking = this.bookingRepository.save(addedBooking);
-        this.rabbitTemplate.convertAndSend(
-                this.exchangeName,
-                routingKey,
-                this.serializeBooking(addedBooking)
-        );
+        this.bookingNotificationPublisher.publishBookingStatusUpdate(addedBooking);
         return mapBooking(addedBooking);
     }
 
@@ -242,21 +210,13 @@ public class BookingServiceMongoDb implements BookingService {
             try {
                 this.tryToBookTickets(openBooking, openBooking.getTrainCarType());
                 this.bookingRepository.save(openBooking);
-                this.rabbitTemplate.convertAndSend(
-                        this.exchangeName,
-                        this.routingKeyConfirmed,
-                        this.serializeBooking(openBooking)
-                );
+                this.bookingNotificationPublisher.publishBookingStatusUpdate(openBooking);
             } catch (TimeTableServiceNotAvailableException exception) {
                 openBooking.setStatus(BookingStatus.RESERVED);
             } catch (NoTrainCarAvailableException exception) {
                 openBooking.setStatus(BookingStatus.REJECTED);
                 this.bookingRepository.save(openBooking);
-                this.rabbitTemplate.convertAndSend(
-                        this.exchangeName,
-                        this.routingKeyRejected,
-                        this.serializeBooking(openBooking)
-                );
+                this.bookingNotificationPublisher.publishBookingStatusUpdate(openBooking);
             } catch (NoConnectionsAvailableException exception) {
                 this.bookingRepository.delete(openBooking);
             }
