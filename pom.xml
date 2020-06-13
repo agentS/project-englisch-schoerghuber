@@ -12,5 +12,6 @@
         <module>timetable</module>
         <module>booking</module>
         <module>gateway</module>
+        <module>notification</module>
     </modules>
 </project>
