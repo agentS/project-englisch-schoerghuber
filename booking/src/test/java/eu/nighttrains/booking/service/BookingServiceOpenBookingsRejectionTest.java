@@ -37,7 +37,7 @@ public class BookingServiceOpenBookingsRejectionTest {
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY, 0);
 		assertDoesNotThrow(() -> {
 			for (int index = 0; index < SLEEPER_CARS_MAXIMUM_CAPACITY; ++index) {
-				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 1), TrainCarType.SLEEPER);
+				BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 1), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 				assertEquals(BookingStatus.CONFIRMED, booking.getStatus());
 			}
 		});
@@ -45,7 +45,7 @@ public class BookingServiceOpenBookingsRejectionTest {
 		this.mockRailwayConnectionLookup(CircuitBreakerTestConfig.CRITICAL_DELAY, 0, 14);
 		this.mockTrainCarsLookup(CircuitBreakerTestConfig.CRITICAL_DELAY, 0);
 		assertDoesNotThrow(() -> {
-			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 1), TrainCarType.SLEEPER);
+			BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 5, 1), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 			assertEquals(BookingStatus.RESERVED, booking.getStatus());
 
 			this.mockRailwayConnectionLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY, 0, 14);
@@ -82,7 +82,7 @@ public class BookingServiceOpenBookingsRejectionTest {
 	void testRejectBookingForInvalidRoute() {
 		this.mockInvalidRailwayConnectionLookup(CircuitBreakerTestConfig.CRITICAL_DELAY, 0, -10);
 
-		BookingDto invalidBooking = this.bookingService.book(0, -10, LocalDate.of(2020, 5, 1), TrainCarType.SLEEPER);
+		BookingDto invalidBooking = this.bookingService.book(0, -10, LocalDate.of(2020, 5, 1), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
 		assertEquals(BookingStatus.RESERVED, invalidBooking.getStatus());
 
 		this.mockInvalidRailwayConnectionLookup(CircuitBreakerTestConfig.NON_CRITICAL_DELAY, 0, -10);

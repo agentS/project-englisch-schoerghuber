@@ -23,18 +23,21 @@ public class Booking {
 
     private TrainCarType trainCarType;
 
+    private String emailAddress;
+
     private BookingStatus status;
 
     private List<Ticket> tickets = new ArrayList<>();
 
     public Booking() {}
 
-    public Booking(Long departureStationId, Long arrivalStationId, LocalDate departureDate, TrainCarType trainCarType, BookingStatus status, List<Ticket> tickets) {
+    public Booking(Long departureStationId, Long arrivalStationId, LocalDate departureDate, TrainCarType trainCarType, String emailAddress, BookingStatus status, List<Ticket> tickets) {
         this.departureStationId = departureStationId;
         this.arrivalStationId = arrivalStationId;
         this.departureDate = departureDate;
         this.trainCarType = trainCarType;
         this.status = status;
+        this.emailAddress = emailAddress;
         this.setTickets(tickets);
     }
 
@@ -76,6 +79,14 @@ public class Booking {
 
     public void setTrainCarType(TrainCarType trainCarType) {
         this.trainCarType = trainCarType;
+    }
+
+    public String getEmailAddress() {
+        return this.emailAddress;
+    }
+
+    public void setEmailAddress(String emailAddress) {
+        this.emailAddress = emailAddress;
     }
 
     public BookingStatus getStatus() {

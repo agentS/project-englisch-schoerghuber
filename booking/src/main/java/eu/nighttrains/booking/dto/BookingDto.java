@@ -17,18 +17,16 @@ public final class BookingDto {
     private TrainCarType trainCarType;
     private BookingStatus status;
     private List<TicketDto> tickets;
+    private String emailAddress;
 
-    public BookingDto(String id, long departureStationId, long arrivalStationId, LocalDate departureDate, TrainCarType trainCarType, BookingStatus status) {
-        this(id, departureStationId, arrivalStationId, departureDate, trainCarType, status, new ArrayList<>());
-    }
-
-    public BookingDto(String id, long departureStationId, long arrivalStationId, LocalDate departureDate, TrainCarType trainCarType, BookingStatus status, List<TicketDto> tickets) {
+    public BookingDto(String id, long departureStationId, long arrivalStationId, LocalDate departureDate, TrainCarType trainCarType, BookingStatus status, String emailAddress, List<TicketDto> tickets) {
         this.id = id;
         this.departureStationId = departureStationId;
         this.arrivalStationId = arrivalStationId;
         this.departureDate = departureDate;
         this.trainCarType = trainCarType;
         this.status = status;
+        this.emailAddress = emailAddress;
         this.tickets = tickets;
     }
 
@@ -78,6 +76,14 @@ public final class BookingDto {
 
     public void setStatus(BookingStatus status) {
         this.status = status;
+    }
+
+    public String getEmailAddress() {
+        return this.emailAddress;
+    }
+
+    public void setEmailAddress(String emailAddress) {
+        this.emailAddress = emailAddress;
     }
 
     public List<TicketDto> getTickets() {

@@ -5,6 +5,7 @@ import eu.nighttrains.booking.dto.BookingRequestDto;
 import eu.nighttrains.booking.service.BookingNotFoundException;
 import eu.nighttrains.booking.service.BookingService;
 import eu.nighttrains.booking.service.NoConnectionsAvailableException;
+import eu.nighttrains.booking.service.UnauthorizedBookingAccess;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.info.Contact;
@@ -17,10 +18,13 @@ import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.*;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.security.Principal;
 
 
 @RestController
@@ -45,16 +49,31 @@ public class BookingEndpoint {
                     responseCode = "404",
                     description = "The booking with the specified ID does not exist.",
                     content = @Content(mediaType = MediaType.TEXT_PLAIN)
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "The user is either unauthenticated.",
+                    content = @Content(mediaType = MediaType.TEXT_PLAIN)
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "The user is not authorized to access the booking.",
+                    content = @Content(mediaType = MediaType.TEXT_PLAIN)
             )
     })
     @Tag(name = BookingEndpoint.OPEN_API_TAG_NAME_BOOKING)
     @GetMapping(value = "/booking/{id}")
-    public ResponseEntity<BookingDto> findById(@PathVariable("id") String id) {
+    public ResponseEntity<BookingDto> findById(
+            @PathVariable("id") String id,
+            @AuthenticationPrincipal Principal principal
+    ) {
         try {
-            BookingDto bookingDto = bookingService.findById(id);
+            BookingDto bookingDto = bookingService.findById(id, principal.getName());
             return new ResponseEntity<>(bookingDto, HttpStatus.OK);
-        } catch (BookingNotFoundException e) {
+        } catch (BookingNotFoundException exception) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (UnauthorizedBookingAccess exception) {
+            return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
     }
 
@@ -69,13 +88,27 @@ public class BookingEndpoint {
                     responseCode = "400",
                     description = "The provided information was not given in the correct format.",
                     content = @Content(mediaType = MediaType.TEXT_PLAIN)
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "The user is either unauthenticated.",
+                    content = @Content(mediaType = MediaType.TEXT_PLAIN)
             )
     })
     @Tag(name = BookingEndpoint.OPEN_API_TAG_NAME_BOOKING)
     @PostMapping(value = "/booking")
-    public ResponseEntity<BookingDto> book(@RequestBody BookingRequestDto bookingRequestDto) {
+    public ResponseEntity<BookingDto> book(
+            @RequestBody BookingRequestDto bookingRequestDto,
+            @AuthenticationPrincipal Principal principal
+    ) {
         try {
-            BookingDto bookingDto = bookingService.book(bookingRequestDto.getDepartureStationId(), bookingRequestDto.getArrivalStationId(), bookingRequestDto.getDepartureDate(), bookingRequestDto.getTrainCarType());
+            BookingDto bookingDto = bookingService.book(
+                    bookingRequestDto.getDepartureStationId(),
+                    bookingRequestDto.getArrivalStationId(),
+                    bookingRequestDto.getDepartureDate(),
+                    bookingRequestDto.getTrainCarType(),
+                    principal.getName()
+            );
             return new ResponseEntity<>(bookingDto, HttpStatus.CREATED);
         } catch (NoConnectionsAvailableException exception) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
