@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    role: messaging
+    protocol: amqp
+    protocolversion: 0-9-7
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.8-management-alpine
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
