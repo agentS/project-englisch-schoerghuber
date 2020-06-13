@@ -19,6 +19,7 @@ spring:
         filters:
         - StripPrefix=1
         - CircuitBreaker=bookingCircuitBreaker
+        - TokenRelay=
       - id: openAPI
         uri: http://localhost:${server.port}/
         predicates:
