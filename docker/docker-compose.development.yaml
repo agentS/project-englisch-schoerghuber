@@ -34,6 +34,11 @@ services:
       - 14268:14268
       - 14250:14250
       - 9411:9411
+  rabbitmq:
+    image: rabbitmq:3.8-management-alpine
+    ports:
+      - 5672:5672
+      - 15672:15672
 volumes:
   mongodb_data_container:
   postgres_data:
