@@ -23,7 +23,7 @@ import javax.ws.rs.core.Application;
                         url = "https://www.gnu.org/licenses/gpl-3.0.en.html"
                 )
         ),
-        servers = @Server(url = "http://192.168.99.100:30272/timetable/", description = "Timetable API development server"),
+        servers = @Server(url = "http://localhost:8081/timetable/", description = "Timetable API development server"),
         tags = @Tag(name = TimetableApiApplication.OPEN_API_TAG_NAME_TIMETABLE, description = "Timetable-related endpoints")
 )
 @ApplicationPath("/")
