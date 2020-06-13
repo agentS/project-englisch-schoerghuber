@@ -1,0 +1,12 @@
+{
+	"amqp":
+	{
+		"host": "localhost",
+		"port": 5672,
+		"username": "guest",
+		"password": "guest",
+		"confirmationQueueName": "bookingstatusupdatesqueue.confirmed",
+		"reservationQueueName": "bookingstatusupdatesqueue.reserved",
+		"rejectionQueueName": "bookingstatusupdatesqueue.rejected"
+	}
+}
