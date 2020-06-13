@@ -32,4 +32,5 @@ build/
 
 # Okta credentials
 src/main/resources/application-security.properties
+src/main/resources/application-security-kubernetes.properties
 

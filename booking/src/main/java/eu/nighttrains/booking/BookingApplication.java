@@ -28,7 +28,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                         url = "https://www.gnu.org/licenses/gpl-3.0.en.html"
                 )
         ),
-        servers = @Server(url = "http://localhost:8081/booking/", description = "Booking API development server"),
+        servers = @Server(url = "http://192.168.99.100:30272/booking/", description = "Booking API development server"),
         tags = @Tag(name = BookingEndpoint.OPEN_API_TAG_NAME_BOOKING, description = "Booking-related endpoints")
 )
 public class BookingApplication {
