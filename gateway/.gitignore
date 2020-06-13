@@ -29,3 +29,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Okta secrets
+src/main/resources/application-security.properties
+
