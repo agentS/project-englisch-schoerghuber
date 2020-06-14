@@ -11,6 +11,7 @@ import io.vertx.kotlin.core.DeploymentOptions
 
 class MainVerticle : AbstractVerticle() {
 	override fun start(startPromise: Promise<Void>) {
+		println(MainVerticle::class.java.name)
 		val fileConfigurationStore = ConfigStoreOptions(
 			type = "file",
 			config = json {

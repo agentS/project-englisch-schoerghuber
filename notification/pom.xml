@@ -166,6 +166,41 @@
 					</arguments>
 				</configuration>
 			</plugin>
+			<plugin>
+				<groupId>com.spotify</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.2.8</version>
+				<executions>
+					<execution>
+						<id>docker</id>
+						<phase>package</phase>
+						<goals>
+							<goal>build</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
+					<imageName>notification</imageName>
+					<resources>
+						<resource>
+							<targetPath>/verticles</targetPath>
+							<directory>${project.build.directory}</directory>
+							<includes>
+								<include>${project.artifactId}-${project.version}-fat.jar</include>
+							</includes>
+						</resource>
+						<resource>
+							<targetPath>/configuration</targetPath>
+							<directory>${project.basedir}</directory>
+							<includes>
+								<include>configuration-kubernetes.json</include>
+							</includes>
+						</resource>
+						<!-- don't forget to also add all the dependencies required by your application -->
+					</resources>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 </project>
