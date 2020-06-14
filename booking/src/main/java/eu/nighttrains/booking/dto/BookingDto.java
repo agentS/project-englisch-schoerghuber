@@ -7,10 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import javax.validation.Valid;
 import javax.validation.constraints.PositiveOrZero;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public final class BookingDto {
 
@@ -41,8 +38,6 @@ public final class BookingDto {
 
     @Schema(required = true)
     private String emailAddress;
-
-    private List<@Valid TicketDto> tickets;
 
     public BookingDto(String id, long departureStationId, long arrivalStationId, LocalDate departureDate, TrainCarType trainCarType, BookingStatus status, String emailAddress, List<TicketDto> tickets) {
         this.id = id;
