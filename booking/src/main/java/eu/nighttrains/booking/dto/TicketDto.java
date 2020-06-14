@@ -2,6 +2,7 @@ package eu.nighttrains.booking.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 import java.time.LocalDate;
 import java.util.Set;
@@ -24,6 +25,7 @@ public final class TicketDto {
     @Schema(required = true)
     private int placeNumber;
 
+    @NotNull
     @Schema(required = true)
     private LocalDate departureDate;
 

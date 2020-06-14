@@ -5,13 +5,15 @@ import eu.nighttrains.timetable.model.TrainCarType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 import java.time.LocalDate;
 import java.util.List;
 
 public final class BookingDto {
 
-    //@NotNull
+    @NotBlank
     @Schema(required = true)
     private String id;
 
@@ -23,19 +25,21 @@ public final class BookingDto {
     @Schema(required = true)
     private long arrivalStationId;
 
+    @NotNull
     @Schema(required = true)
     private LocalDate departureDate;
 
-    //@NotNull
+    @NotNull
     @Schema(required = true)
     private TrainCarType trainCarType;
 
-    //@NotNull
+    @NotNull
     @Schema(required = true)
     private BookingStatus status;
 
     private List<@Valid TicketDto> tickets;
 
+    @NotBlank
     @Schema(required = true)
     private String emailAddress;
 
