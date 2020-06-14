@@ -17,14 +17,19 @@ import * as runtime from '../runtime';
 import {
     RailwayStationConnectionDto,
     RailwayStationConnectionDtoFromJSON,
+    RailwayStationConnectionDtoToJSON,
     RailwayStationDestinationsDto,
     RailwayStationDestinationsDtoFromJSON,
+    RailwayStationDestinationsDtoToJSON,
     RailwayStationDto,
     RailwayStationDtoFromJSON,
+    RailwayStationDtoToJSON,
     TrainCarDto,
     TrainCarDtoFromJSON,
+    TrainCarDtoToJSON,
     TrainConnectionDto,
     TrainConnectionDtoFromJSON,
+    TrainConnectionDtoToJSON,
 } from '../models';
 
 export interface DestinationsFromIdGetRequest {
@@ -61,7 +66,7 @@ export interface TrainConnectionIdGetRequest {
 }
 
 /**
- * no description
+ * 
  */
 export class TimetableApi extends runtime.BaseAPI {
 
@@ -69,7 +74,7 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async destinationsFromIdGetRaw(requestParameters: DestinationsFromIdGetRequest): Promise<runtime.ApiResponse<RailwayStationDestinationsDto>> {
         if (requestParameters.id === null || requestParameters.id === undefined) {
-            throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling destinationsFromIdGet.');
+            throw new runtime.RequiredError('id','Required parameter requestParameters.id was null or undefined when calling destinationsFromIdGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};
@@ -97,11 +102,11 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async destinationsFromOriginIdToDestinationIdGetRaw(requestParameters: DestinationsFromOriginIdToDestinationIdGetRequest): Promise<runtime.ApiResponse<Array<RailwayStationConnectionDto>>> {
         if (requestParameters.destinationId === null || requestParameters.destinationId === undefined) {
-            throw new runtime.RequiredError('destinationId', 'Required parameter requestParameters.destinationId was null or undefined when calling destinationsFromOriginIdToDestinationIdGet.');
+            throw new runtime.RequiredError('destinationId','Required parameter requestParameters.destinationId was null or undefined when calling destinationsFromOriginIdToDestinationIdGet.');
         }
 
         if (requestParameters.originId === null || requestParameters.originId === undefined) {
-            throw new runtime.RequiredError('originId', 'Required parameter requestParameters.originId was null or undefined when calling destinationsFromOriginIdToDestinationIdGet.');
+            throw new runtime.RequiredError('originId','Required parameter requestParameters.originId was null or undefined when calling destinationsFromOriginIdToDestinationIdGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};
@@ -153,7 +158,7 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async railwayStationIdGetRaw(requestParameters: RailwayStationIdGetRequest): Promise<runtime.ApiResponse<RailwayStationDto>> {
         if (requestParameters.id === null || requestParameters.id === undefined) {
-            throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling railwayStationIdGet.');
+            throw new runtime.RequiredError('id','Required parameter requestParameters.id was null or undefined when calling railwayStationIdGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};
@@ -181,7 +186,7 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async railwayStationSearchSearchTermGetRaw(requestParameters: RailwayStationSearchSearchTermGetRequest): Promise<runtime.ApiResponse<Array<RailwayStationDto>>> {
         if (requestParameters.searchTerm === null || requestParameters.searchTerm === undefined) {
-            throw new runtime.RequiredError('searchTerm', 'Required parameter requestParameters.searchTerm was null or undefined when calling railwayStationSearchSearchTermGet.');
+            throw new runtime.RequiredError('searchTerm','Required parameter requestParameters.searchTerm was null or undefined when calling railwayStationSearchSearchTermGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};
@@ -209,7 +214,7 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async trainConnectionCodeCodeCarsGetRaw(requestParameters: TrainConnectionCodeCodeCarsGetRequest): Promise<runtime.ApiResponse<Array<TrainCarDto>>> {
         if (requestParameters.code === null || requestParameters.code === undefined) {
-            throw new runtime.RequiredError('code', 'Required parameter requestParameters.code was null or undefined when calling trainConnectionCodeCodeCarsGet.');
+            throw new runtime.RequiredError('code','Required parameter requestParameters.code was null or undefined when calling trainConnectionCodeCodeCarsGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};
@@ -237,7 +242,7 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async trainConnectionCodeCodeGetRaw(requestParameters: TrainConnectionCodeCodeGetRequest): Promise<runtime.ApiResponse<TrainConnectionDto>> {
         if (requestParameters.code === null || requestParameters.code === undefined) {
-            throw new runtime.RequiredError('code', 'Required parameter requestParameters.code was null or undefined when calling trainConnectionCodeCodeGet.');
+            throw new runtime.RequiredError('code','Required parameter requestParameters.code was null or undefined when calling trainConnectionCodeCodeGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};
@@ -289,7 +294,7 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async trainConnectionIdCarsGetRaw(requestParameters: TrainConnectionIdCarsGetRequest): Promise<runtime.ApiResponse<Array<TrainCarDto>>> {
         if (requestParameters.id === null || requestParameters.id === undefined) {
-            throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling trainConnectionIdCarsGet.');
+            throw new runtime.RequiredError('id','Required parameter requestParameters.id was null or undefined when calling trainConnectionIdCarsGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};
@@ -317,7 +322,7 @@ export class TimetableApi extends runtime.BaseAPI {
      */
     async trainConnectionIdGetRaw(requestParameters: TrainConnectionIdGetRequest): Promise<runtime.ApiResponse<TrainConnectionDto>> {
         if (requestParameters.id === null || requestParameters.id === undefined) {
-            throw new runtime.RequiredError('id', 'Required parameter requestParameters.id was null or undefined when calling trainConnectionIdGet.');
+            throw new runtime.RequiredError('id','Required parameter requestParameters.id was null or undefined when calling trainConnectionIdGet.');
         }
 
         const queryParameters: runtime.HTTPQuery = {};

@@ -12,22 +12,28 @@
  * Do not edit the class manually.
  */
 
-import {RailwayStationDto, RailwayStationDtoFromJSON, RailwayStationDtoToJSON,} from './';
+import { exists, mapValues } from '../runtime';
+import {
+    RailwayStationDto,
+    RailwayStationDtoFromJSON,
+    RailwayStationDtoFromJSONTyped,
+    RailwayStationDtoToJSON,
+} from './';
 
 /**
- *
+ * 
  * @export
  * @interface RailwayStationDestinationsDto
  */
 export interface RailwayStationDestinationsDto {
     /**
-     *
+     * 
      * @type {Array<RailwayStationDto>}
      * @memberof RailwayStationDestinationsDto
      */
     destinations: Array<RailwayStationDto>;
     /**
-     *
+     * 
      * @type {RailwayStationDto}
      * @memberof RailwayStationDestinationsDto
      */
@@ -43,7 +49,7 @@ export function RailwayStationDestinationsDtoFromJSONTyped(json: any, ignoreDisc
         return json;
     }
     return {
-
+        
         'destinations': ((json['destinations'] as Array<any>).map(RailwayStationDtoFromJSON)),
         'origin': RailwayStationDtoFromJSON(json['origin']),
     };
@@ -57,7 +63,7 @@ export function RailwayStationDestinationsDtoToJSON(value?: RailwayStationDestin
         return null;
     }
     return {
-
+        
         'destinations': ((value.destinations as Array<any>).map(RailwayStationDtoToJSON)),
         'origin': RailwayStationDtoToJSON(value.origin),
     };

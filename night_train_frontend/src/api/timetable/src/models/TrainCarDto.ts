@@ -12,34 +12,40 @@
  * Do not edit the class manually.
  */
 
-import {TrainCarType, TrainCarTypeFromJSON, TrainCarTypeToJSON,} from './';
+import { exists, mapValues } from '../runtime';
+import {
+    TrainCarType,
+    TrainCarTypeFromJSON,
+    TrainCarTypeFromJSONTyped,
+    TrainCarTypeToJSON,
+} from './';
 
 /**
- *
+ * 
  * @export
  * @interface TrainCarDto
  */
 export interface TrainCarDto {
     /**
-     *
+     * 
      * @type {number}
      * @memberof TrainCarDto
      */
     capacity: number;
     /**
-     *
+     * 
      * @type {number}
      * @memberof TrainCarDto
      */
     id: number;
     /**
-     *
+     * 
      * @type {number}
      * @memberof TrainCarDto
      */
     number: number;
     /**
-     *
+     * 
      * @type {TrainCarType}
      * @memberof TrainCarDto
      */
@@ -55,7 +61,7 @@ export function TrainCarDtoFromJSONTyped(json: any, ignoreDiscriminator: boolean
         return json;
     }
     return {
-
+        
         'capacity': json['capacity'],
         'id': json['id'],
         'number': json['number'],
@@ -71,7 +77,7 @@ export function TrainCarDtoToJSON(value?: TrainCarDto | null): any {
         return null;
     }
     return {
-
+        
         'capacity': value.capacity,
         'id': value.id,
         'number': value.number,

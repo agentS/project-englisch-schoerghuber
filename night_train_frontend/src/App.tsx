@@ -4,7 +4,7 @@ import {Route} from "react-router-dom";
 import {Nav, Navbar} from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-import {TimetableApi} from "./api/timetable";
+import {Configuration, TimetableApi} from "./api/timetable";
 import {BookingApi} from "./api/booking";
 
 import ConnectionSearch from "./timetable/ConnectionSearch";
@@ -15,7 +15,8 @@ import BookingDisplay from "./booking/BookingDisplay";
 
 class App extends React.Component {
 	render() {
-		const timetableApi = new TimetableApi();
+
+		const timetableApi = new TimetableApi()
 		const bookingApi = new BookingApi();
 
 		const connectionSearch = () => (<ConnectionSearch timetableApi={timetableApi}/>);

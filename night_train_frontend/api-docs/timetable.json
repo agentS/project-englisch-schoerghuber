@@ -1,0 +1,530 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Timetable API",
+    "contact": {
+      "name": "Lukas Schoerghuber",
+      "email": "lukas.schoerghuber@posteo.at"
+    },
+    "license": {
+      "name": "GPLv3",
+      "url": "https://www.gnu.org/licenses/gpl-3.0.en.html"
+    },
+    "version": "0.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://172.17.37.171:30451/timetable/",
+      "description": "Timetable API development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "timetable",
+      "description": "Timetable-related endpoints"
+    }
+  ],
+  "paths": {
+    "/destinations/from/{id}": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Origin railway station ID",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": "0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of all destinations reachable from the specified destination not including any stops in between",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RailwayStationDestinationsDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The railway station with the specified ID does not exist.",
+            "content": {
+              "text/plain": {}
+            }
+          }
+        }
+      }
+    },
+    "/destinations/from/{originId}/to/{destinationId}": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "destinationId",
+            "in": "path",
+            "description": "Destination railway station ID",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": "14"
+          },
+          {
+            "name": "originId",
+            "in": "path",
+            "description": "Origin railway station ID",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": "0"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of all stops including their train connection information between the origin station and the destination station.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListRailwayStationConnectionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "There is no route connecting the two railway stations. This might be because there is no connection between the stations or at least one of the stations does not exist.",
+            "content": {
+              "text/plain": {}
+            }
+          }
+        }
+      }
+    },
+    "/railwayStation": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list containing all railway stations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListRailwayStationDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/railwayStation/search/{searchTerm}": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "searchTerm",
+            "in": "path",
+            "description": "Search term entered by the user",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Amst"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of railway stations whose name starts with the specified search term",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListRailwayStationDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/railwayStation/{id}": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Railway connection id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": "1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Details of the railway station",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RailwayStationDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The railway station with the specified ID does not exist.",
+            "content": {
+              "text/plain": {}
+            }
+          }
+        }
+      }
+    },
+    "/trainConnection": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of all train connections including their respective train cars, but not including stops",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTrainConnectionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/trainConnection/code/{code}": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "description": "Train connection code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "NJ 466"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Code and train cars of the specified train connection not including any stops",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainConnectionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The train connection with the specified code does not exist.",
+            "content": {
+              "text/plain": {}
+            }
+          }
+        }
+      }
+    },
+    "/trainConnection/code/{code}/cars": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "description": "Train connection code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "NJ 466"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train cars of the specified train connection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTrainCarDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The train connection with the specified code does not exist.",
+            "content": {
+              "text/plain": {}
+            }
+          }
+        }
+      }
+    },
+    "/trainConnection/{id}": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Train connection id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": "1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Code and train cars of the specified train connection not including any stops",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainConnectionDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The train connection with the specified ID does not exist.",
+            "content": {
+              "text/plain": {}
+            }
+          }
+        }
+      }
+    },
+    "/trainConnection/{id}/cars": {
+      "get": {
+        "tags": [
+          "timetable"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Train connection id",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "example": "1"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Train cars of the specified train connection",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListTrainCarDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The train connection with the specified ID does not exist.",
+            "content": {
+              "text/plain": {}
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TrainCarDto": {
+        "required": [
+          "capacity",
+          "id",
+          "number",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "capacity": {
+            "format": "int32",
+            "minimum": 1,
+            "type": "integer"
+          },
+          "id": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "number": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": {
+            "$ref": "#/components/schemas/TrainCarType"
+          }
+        }
+      },
+      "ListTrainCarDto": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/TrainCarDto"
+        }
+      },
+      "TrainCarType": {
+        "enum": [
+          "COUCHETTE",
+          "SEAT",
+          "SLEEPER"
+        ],
+        "type": "string"
+      },
+      "TrainConnectionDto": {
+        "required": [
+          "code",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "pattern": "\\S",
+            "type": "string",
+            "nullable": false
+          },
+          "id": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "trainCars": {
+            "$ref": "#/components/schemas/ListTrainCarDto"
+          }
+        }
+      },
+      "ListTrainConnectionDto": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/TrainConnectionDto"
+        }
+      },
+      "RailwayStationDto": {
+        "required": [
+          "id",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "name": {
+            "pattern": "\\S",
+            "type": "string",
+            "nullable": false
+          }
+        }
+      },
+      "ListRailwayStationDto": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/RailwayStationDto"
+        }
+      },
+      "RailwayStationDestinationsDto": {
+        "required": [
+          "destinations",
+          "origin"
+        ],
+        "type": "object",
+        "properties": {
+          "destinations": {
+            "$ref": "#/components/schemas/ListRailwayStationDto"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/RailwayStationDto"
+          }
+        }
+      },
+      "RailwayStationConnectionDto": {
+        "required": [
+          "arrivalStation",
+          "arrivalTime",
+          "departureStation",
+          "departureTime",
+          "trainConnection"
+        ],
+        "type": "object",
+        "properties": {
+          "arrivalStation": {
+            "$ref": "#/components/schemas/RailwayStationDto"
+          },
+          "arrivalTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "departureStation": {
+            "$ref": "#/components/schemas/RailwayStationDto"
+          },
+          "departureTime": {
+            "$ref": "#/components/schemas/LocalTime"
+          },
+          "trainConnection": {
+            "$ref": "#/components/schemas/TrainConnectionDto"
+          }
+        }
+      },
+      "ListRailwayStationConnectionDto": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/RailwayStationConnectionDto"
+        }
+      },
+      "LocalTime": {
+        "format": "local-time",
+        "type": "string",
+        "externalDocs": {
+          "description": "As defined by 'partial-time' in RFC3339",
+          "url": "https://xml2rfc.ietf.org/public/rfc/html/rfc3339.html#anchor14"
+        },
+        "example": "13:45.30.123456789"
+      }
+    }
+  }
+}

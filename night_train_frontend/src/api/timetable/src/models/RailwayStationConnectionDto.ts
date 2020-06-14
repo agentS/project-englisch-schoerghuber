@@ -12,47 +12,50 @@
  * Do not edit the class manually.
  */
 
+import { exists, mapValues } from '../runtime';
 import {
     RailwayStationDto,
     RailwayStationDtoFromJSON,
+    RailwayStationDtoFromJSONTyped,
     RailwayStationDtoToJSON,
     TrainConnectionDto,
     TrainConnectionDtoFromJSON,
+    TrainConnectionDtoFromJSONTyped,
     TrainConnectionDtoToJSON,
 } from './';
 
 /**
- *
+ * 
  * @export
  * @interface RailwayStationConnectionDto
  */
 export interface RailwayStationConnectionDto {
     /**
-     *
+     * 
      * @type {RailwayStationDto}
      * @memberof RailwayStationConnectionDto
      */
     arrivalStation: RailwayStationDto;
     /**
-     *
+     * 
      * @type {string}
      * @memberof RailwayStationConnectionDto
      */
     arrivalTime: string;
     /**
-     *
+     * 
      * @type {RailwayStationDto}
      * @memberof RailwayStationConnectionDto
      */
     departureStation: RailwayStationDto;
     /**
-     *
+     * 
      * @type {string}
      * @memberof RailwayStationConnectionDto
      */
     departureTime: string;
     /**
-     *
+     * 
      * @type {TrainConnectionDto}
      * @memberof RailwayStationConnectionDto
      */
@@ -68,7 +71,7 @@ export function RailwayStationConnectionDtoFromJSONTyped(json: any, ignoreDiscri
         return json;
     }
     return {
-
+        
         'arrivalStation': RailwayStationDtoFromJSON(json['arrivalStation']),
         'arrivalTime': json['arrivalTime'],
         'departureStation': RailwayStationDtoFromJSON(json['departureStation']),
@@ -85,7 +88,7 @@ export function RailwayStationConnectionDtoToJSON(value?: RailwayStationConnecti
         return null;
     }
     return {
-
+        
         'arrivalStation': RailwayStationDtoToJSON(value.arrivalStation),
         'arrivalTime': value.arrivalTime,
         'departureStation': RailwayStationDtoToJSON(value.departureStation),
