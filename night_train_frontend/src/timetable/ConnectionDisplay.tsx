@@ -7,27 +7,27 @@ import moment from "moment";
 import {MOMENT_ISO_DATE_FORMAT, MOMENT_TIME_PARSING_FORMAT} from "../Constants";
 
 import {RailwayStationConnectionDto, TimetableApi} from "../api/timetable";
-import {BookingApi, TrainCarType} from "../api/booking";
+import {BookingApi, BookingRequestDtoTrainCarTypeEnum} from "../api/booking";
 
 interface ConnectionDisplayProperties extends RouteComponentProps {
 	timetableApi: TimetableApi;
 	bookingApi: BookingApi;
 	departureStationId: number;
 	arrivalStationId: number;
-};
+}
 
 interface ConnectionDisplayState {
 	connection: Array<RailwayStationConnectionDto>;
-	trainCarType: TrainCarType;
+	trainCarType: BookingRequestDtoTrainCarTypeEnum;
 	departureDay: Date;
-};
+}
 
 class ConnectionDisplay extends React.Component<ConnectionDisplayProperties, ConnectionDisplayState> {
 	constructor(properties: ConnectionDisplayProperties) {
 		super(properties);
 		this.state = {
 			connection: [],
-			trainCarType: TrainCarType.SLEEPER,
+			trainCarType: BookingRequestDtoTrainCarTypeEnum.SLEEPER,
 			departureDay: moment().startOf("day").toDate()
 		};
 	}
@@ -73,15 +73,15 @@ class ConnectionDisplay extends React.Component<ConnectionDisplayProperties, Con
 	}
 
 	async bookTicket() {
-		const bookingResponse = await this.props.bookingApi.apiBookingsPost({
-			bookingRequestDto2: {
-				originId: this.props.departureStationId,
-				destinationId: this.props.arrivalStationId,
+		const bookingResponse = await this.props.bookingApi.book({
+			bookingRequestDto:{
+				departureStationId: this.props.departureStationId,
+				arrivalStationId: this.props.arrivalStationId,
 				trainCarType: this.state.trainCarType,
-				journeyStartDate: this.state.departureDay
-			}
-		});
-		this.props.history.push(`/booking/${bookingResponse.bookingId}`);
+				departureDate: this.state.departureDay
+			}}
+		);
+		this.props.history.push(`/booking/${bookingResponse.id}`);
 	}
 
 	render() {
@@ -154,14 +154,14 @@ class ConnectionDisplay extends React.Component<ConnectionDisplayProperties, Con
 					}}>
 						<Form.Group controlId="fgCarType">
 							<Form.Check inline label="Sleeper car" type="radio" id="cbSleeper" name="cbCarType"
-										checked={this.state.trainCarType === TrainCarType.SLEEPER}
-										onChange={() => this.setState({trainCarType: TrainCarType.SLEEPER})}/>
+										checked={this.state.trainCarType === BookingRequestDtoTrainCarTypeEnum.SLEEPER}
+										onChange={() => this.setState({trainCarType: BookingRequestDtoTrainCarTypeEnum.SLEEPER})}/>
 							<Form.Check inline label="Couchette car" type="radio" id="cbCouchette" name="cbCarType"
-										checked={this.state.trainCarType === TrainCarType.COUCHETTE}
-										onChange={() => this.setState({trainCarType: TrainCarType.COUCHETTE})}/>
+										checked={this.state.trainCarType === BookingRequestDtoTrainCarTypeEnum.COUCHETTE}
+										onChange={() => this.setState({trainCarType: BookingRequestDtoTrainCarTypeEnum.COUCHETTE})}/>
 							<Form.Check inline label="Seat car" type="radio" id="cbSeat" name="cbCarType"
-										checked={this.state.trainCarType === TrainCarType.SEAT}
-										onChange={() => this.setState({trainCarType: TrainCarType.SEAT})}/>
+										checked={this.state.trainCarType === BookingRequestDtoTrainCarTypeEnum.SEAT}
+										onChange={() => this.setState({trainCarType: BookingRequestDtoTrainCarTypeEnum.SEAT})}/>
 						</Form.Group>
 						<Form.Group controlId="fgDepartureDate">
 							<Form.Label>Departure date</Form.Label>
