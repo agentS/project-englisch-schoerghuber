@@ -39,11 +39,21 @@ class MainVerticle : AbstractVerticle() {
 						val amqpListenerOptions = DeploymentOptions(
 							config = configuration.getJsonObject("amqp")
 						)
-						this.vertx.deployVerticle(amqpListenerVerticle, amqpListenerOptions) { amqpListenerDeplyomentResult ->
-							if (amqpListenerDeplyomentResult.failed()) {
-								startPromise.fail(amqpListenerDeplyomentResult.cause())
+						this.vertx.deployVerticle(amqpListenerVerticle, amqpListenerOptions) { amqpListenerDeploymentResult ->
+							if (amqpListenerDeploymentResult.failed()) {
+								startPromise.fail(amqpListenerDeploymentResult.cause())
 							} else {
-								startPromise.complete()
+								val healthCheckVerticle = HealthCheckVerticle()
+								val healthCheckVerticleOptions = DeploymentOptions(
+									config = configuration.getJsonObject("http")
+								)
+								this.vertx.deployVerticle(healthCheckVerticle, healthCheckVerticleOptions) { healthCheckDeploymentResult ->
+									if (healthCheckDeploymentResult.failed()) {
+										startPromise.fail(healthCheckDeploymentResult.cause())
+									} else {
+										startPromise.complete()
+									}
+								}
 							}
 						}
 					}

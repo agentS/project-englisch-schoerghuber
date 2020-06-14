@@ -16,5 +16,9 @@
 		"username": "",
 		"password": "",
 		"fromAddress": "notification@nighttrains.eu"
+	},
+	"http":
+	{
+		"port": 8085
 	}
 }
