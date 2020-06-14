@@ -5,11 +5,11 @@ import moment from "moment";
 
 import {MOMENT_DISPLAY_DATE_FORMAT} from "../Constants";
 
-import {BookingApi, BookingDto, TicketDto} from "../api/booking";
+import {BookingApi, BookingDto} from "../api/booking";
 
 interface BookingDisplayProperties {
 	bookingApi: BookingApi;
-	bookingId: number;
+	bookingId: string;
 }
 
 interface BookingDisplayState {
@@ -35,59 +35,39 @@ class BookingDisplay extends React.Component<BookingDisplayProperties, BookingDi
 	}
 
 	async loadBooking() {
-		/*
-		const booking = await this.props.bookingApi.apiBookingsIdGet({id: this.props.bookingId});
+
+		const booking = await this.props.bookingApi.findById({id: this.props.bookingId});
 		this.setState({booking});
-		 */
+
 	}
 
 	render() {
-		/*
+
 		if ((this.state.booking !== undefined) && (this.state.booking !== null)) {
 			return (
 				<div className="mt-4">
-					<h1>{this.state.booking.originStationName} to {this.state.booking.destinationStationName}</h1>
+					<h1>{this.state.booking.departureStationId} to {this.state.booking.arrivalStationId}</h1>
 					<h1>Departure
 						date: {moment(this.state.booking.departureDate).format(MOMENT_DISPLAY_DATE_FORMAT)}</h1>
 					<h2>Tickets</h2>
 					<Accordion>
-						{this.state.booking.tickets?.map(ticket => (
-							<Card key={ticket.id}>
+						{this.state.booking.tickets?.map((ticket, index) => (
+							<Card key={index}>
 								<Card.Header>
 									<Accordion.Toggle as={Button} variant="link"
-													  eventKey={convertTicketIdToString(ticket)}>
-										{ticket.trainCode}
+													  eventKey={index.toString()}>
+										{ticket.trainConnectionId}
 									</Accordion.Toggle>
 								</Card.Header>
-								<Accordion.Collapse eventKey={convertTicketIdToString(ticket)}>
+								<Accordion.Collapse eventKey={index.toString()}>
 									<Card.Body>
-										<h3>Train code: {ticket.trainCode}</h3>
+										<h3>Train code: {ticket.trainConnectionId}</h3>
 
 										<h5>Reservation</h5>
-										<p>Car type: {ticket.stops?.[0].reservation?.trainCar?.type}</p>
-										<p>Car number: {ticket.stops?.[0].reservation?.trainCar?.number}</p>
+										<p>Car type: {this.state.booking?.trainCarType}</p>
+										<p>Car number: {ticket.trainCarId}</p>
+										<p>Place number: {ticket.placeNumber}</p>
 
-										<h5>Timetable</h5>
-										<Table striped bordered>
-											<thead>
-											<tr>
-												<th>Departure stop name</th>
-												<th>Departure time</th>
-												<th>Arrival stop name</th>
-												<th>Arrival time</th>
-											</tr>
-											</thead>
-											<tbody>
-											{ticket.stops?.map(stop => (
-												<tr key={`${stop.connection?.departureStation?.id}_${stop.connection?.arrivalStation?.id}`}>
-													<td>{stop.connection?.departureStation?.name}</td>
-													<td>{stop.connection?.departureTime}</td>
-													<td>{stop.connection?.arrivalStation?.name}</td>
-													<td>{stop.connection?.arrivalTime}</td>
-												</tr>
-											))}
-											</tbody>
-										</Table>
 									</Card.Body>
 								</Accordion.Collapse>
 							</Card>
@@ -98,20 +78,8 @@ class BookingDisplay extends React.Component<BookingDisplayProperties, BookingDi
 		} else {
 			return (<h3>Loading...</h3>);
 		}
-*/
-		return <h1>TODO: Apply API changes to this view!</h1>
 	}
 
 }
-
-/*
-function convertTicketIdToString(ticket: TicketDto): string {
-	if ((ticket.id !== undefined) && (ticket.id !== null)) {
-		return ticket.id.toString();
-	} else {
-		throw new Error("Undefined ticket ID");
-	}
-}
- */
 
 export default BookingDisplay;
