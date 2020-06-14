@@ -19,13 +19,15 @@
     "react-dom": "^16.13.1",
     "react-router-dom": "^5.1.2",
     "react-scripts": "3.4.1",
-    "typescript": "^3.7.5"
+    "typescript": "^3.7.5",
+    "timetable-api": "file:./src/api/timetable"
   },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "gen-timetable-api": "rm -rf ./src/api/timetable && openapi-generator generate -i ./api-docs/timetable.json --generator-name typescript-fetch -o ./src/api/timetable --config ./api-docs/timetable.config.json && cd ./src/api/timetable && yarn"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -41,5 +43,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^1.0.13-4.3.1"
   }
 }

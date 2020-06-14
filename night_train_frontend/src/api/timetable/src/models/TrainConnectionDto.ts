@@ -12,29 +12,34 @@
  * Do not edit the class manually.
  */
 
-import {exists} from '../runtime';
-import {TrainCarDto, TrainCarDtoFromJSON, TrainCarDtoToJSON,} from './';
+import { exists, mapValues } from '../runtime';
+import {
+    TrainCarDto,
+    TrainCarDtoFromJSON,
+    TrainCarDtoFromJSONTyped,
+    TrainCarDtoToJSON,
+} from './';
 
 /**
- *
+ * 
  * @export
  * @interface TrainConnectionDto
  */
 export interface TrainConnectionDto {
     /**
-     *
+     * 
      * @type {string}
      * @memberof TrainConnectionDto
      */
     code: string;
     /**
-     *
+     * 
      * @type {number}
      * @memberof TrainConnectionDto
      */
     id: number;
     /**
-     *
+     * 
      * @type {Array<TrainCarDto>}
      * @memberof TrainConnectionDto
      */
@@ -50,7 +55,7 @@ export function TrainConnectionDtoFromJSONTyped(json: any, ignoreDiscriminator: 
         return json;
     }
     return {
-
+        
         'code': json['code'],
         'id': json['id'],
         'trainCars': !exists(json, 'trainCars') ? undefined : ((json['trainCars'] as Array<any>).map(TrainCarDtoFromJSON)),
@@ -65,7 +70,7 @@ export function TrainConnectionDtoToJSON(value?: TrainConnectionDto | null): any
         return null;
     }
     return {
-
+        
         'code': value.code,
         'id': value.id,
         'trainCars': value.trainCars === undefined ? undefined : ((value.trainCars as Array<any>).map(TrainCarDtoToJSON)),
