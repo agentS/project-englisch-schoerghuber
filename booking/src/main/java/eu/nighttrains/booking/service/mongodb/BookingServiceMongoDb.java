@@ -1,5 +1,7 @@
 package eu.nighttrains.booking.service.mongodb;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import eu.nighttrains.booking.dal.BookingRepository;
 import eu.nighttrains.booking.model.Booking;
 import eu.nighttrains.booking.notification.BookingNotificationPublisher;
@@ -13,7 +15,12 @@ import eu.nighttrains.timetable.dto.TrainCarDto;
 import eu.nighttrains.timetable.dto.TrainConnectionDto;
 import eu.nighttrains.timetable.model.TrainCarType;
 import io.vavr.Tuple2;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
