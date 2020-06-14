@@ -16,7 +16,7 @@ import BookingDisplay from "./booking/BookingDisplay";
 class App extends React.Component {
 	render() {
 
-		const timetableApi = new TimetableApi()
+		const timetableApi = new TimetableApi();
 		const bookingApi = new BookingApi();
 
 		const connectionSearch = () => (<ConnectionSearch timetableApi={timetableApi}/>);
