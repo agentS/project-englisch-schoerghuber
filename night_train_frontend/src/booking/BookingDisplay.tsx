@@ -35,11 +35,14 @@ class BookingDisplay extends React.Component<BookingDisplayProperties, BookingDi
 	}
 
 	async loadBooking() {
+		/*
 		const booking = await this.props.bookingApi.apiBookingsIdGet({id: this.props.bookingId});
 		this.setState({booking});
+		 */
 	}
 
 	render() {
+		/*
 		if ((this.state.booking !== undefined) && (this.state.booking !== null)) {
 			return (
 				<div className="mt-4">
@@ -95,10 +98,13 @@ class BookingDisplay extends React.Component<BookingDisplayProperties, BookingDi
 		} else {
 			return (<h3>Loading...</h3>);
 		}
-
+*/
+		return <h1>TODO: Apply API changes to this view!</h1>
 	}
+
 }
 
+/*
 function convertTicketIdToString(ticket: TicketDto): string {
 	if ((ticket.id !== undefined) && (ticket.id !== null)) {
 		return ticket.id.toString();
@@ -106,5 +112,6 @@ function convertTicketIdToString(ticket: TicketDto): string {
 		throw new Error("Undefined ticket ID");
 	}
 }
+ */
 
 export default BookingDisplay;

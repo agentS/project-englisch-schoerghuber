@@ -4,7 +4,7 @@ import {Route} from "react-router-dom";
 import {Nav, Navbar} from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-import {Configuration, TimetableApi} from "./api/timetable";
+import {TimetableApi} from "./api/timetable";
 import {BookingApi} from "./api/booking";
 
 import ConnectionSearch from "./timetable/ConnectionSearch";
