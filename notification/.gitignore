@@ -184,5 +184,3 @@ nbdist/
 !.vscode/launch.json
 !.vscode/extensions.json
 
-configuration.json
-

@@ -10,9 +10,7 @@ import io.vertx.config.ConfigRetriever
 import io.vertx.kotlin.core.DeploymentOptions
 
 class MainVerticle : AbstractVerticle() {
-
 	override fun start(startPromise: Promise<Void>) {
-
 		val fileConfigurationStore = ConfigStoreOptions(
 			type = "file",
 			config = json {
@@ -29,15 +27,25 @@ class MainVerticle : AbstractVerticle() {
 			} else {
 				val configuration = configurationRetrieverResult.result()
 
-				val amqpListenerVerticle = AmqpListenerVerticle()
-				val amqpListenerOptions = DeploymentOptions(
-					config = configuration.getJsonObject("amqp")
+				val mailSenderVerticle = MailSenderVerticle()
+				val mailSenderVerticleConfiguration = DeploymentOptions(
+					config = configuration.getJsonObject("email")
 				)
-				this.vertx.deployVerticle(amqpListenerVerticle, amqpListenerOptions) { amqpListenerDeplyomentResult ->
-					if (amqpListenerDeplyomentResult.failed()) {
-						startPromise.fail(amqpListenerDeplyomentResult.cause())
+				this.vertx.deployVerticle(mailSenderVerticle, mailSenderVerticleConfiguration) { mailSenderDeploymentResult ->
+					if (mailSenderDeploymentResult.failed()) {
+						startPromise.fail(mailSenderDeploymentResult.cause())
 					} else {
-						startPromise.complete()
+						val amqpListenerVerticle = AmqpListenerVerticle()
+						val amqpListenerOptions = DeploymentOptions(
+							config = configuration.getJsonObject("amqp")
+						)
+						this.vertx.deployVerticle(amqpListenerVerticle, amqpListenerOptions) { amqpListenerDeplyomentResult ->
+							if (amqpListenerDeplyomentResult.failed()) {
+								startPromise.fail(amqpListenerDeplyomentResult.cause())
+							} else {
+								startPromise.complete()
+							}
+						}
 					}
 				}
 			}

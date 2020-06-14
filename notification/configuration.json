@@ -1,0 +1,20 @@
+{
+	"amqp":
+	{
+		"host": "localhost",
+		"port": 5672,
+		"username": "guest",
+		"password": "guest",
+		"confirmationQueueName": "bookingstatusupdatesqueue.confirmed",
+		"reservationQueueName": "bookingstatusupdatesqueue.reserved",
+		"rejectionQueueName": "bookingstatusupdatesqueue.rejected"
+	},
+	"email":
+	{
+		"host": "127.0.0.1",
+		"port": 587,
+		"username": "",
+		"password": "",
+		"fromAddress": "notification@nighttrains.eu"
+	}
+}
