@@ -13,7 +13,7 @@
  */
 
 
-export const BASE_PATH = "http://172.17.37.171:30451/booking".replace(/\/+$/, "");
+export const BASE_PATH = "http://192.168.185.148:31210/booking".replace(/\/+$/, "");
 
 const isBlob = (value: any) => typeof Blob !== 'undefined' && value instanceof Blob;
 
