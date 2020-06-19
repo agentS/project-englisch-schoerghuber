@@ -182,6 +182,10 @@
 				<configuration>
 					<dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
 					<imageName>notification</imageName>
+					<imageTags>
+						<imageTag>${project.version}</imageTag>
+						<imageTag>latest</imageTag>
+					</imageTags>
 					<resources>
 						<resource>
 							<targetPath>/verticles</targetPath>

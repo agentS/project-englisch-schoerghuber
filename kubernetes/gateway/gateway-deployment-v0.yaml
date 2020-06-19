@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      name: gateway-pod
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: gateway:0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 8081
+          readinessProbe:
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+          livenessProbe:
+            periodSeconds: 60
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081

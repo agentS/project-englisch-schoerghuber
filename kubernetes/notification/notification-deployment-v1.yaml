@@ -1,37 +1,39 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: gateway
+  name: notification
 spec:
   replicas: 2
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
-      app: gateway
+      app: notification
   template:
     metadata:
-      name: gateway-pod
+      name: notification-pod
       labels:
-        app: gateway
+        app: notification
     spec:
       containers:
-        - name: gateway
-          image: gateway:latest
+        - name: notification
+          image: notification:1
           imagePullPolicy: "IfNotPresent"
           ports:
-            - containerPort: 8081
+            - containerPort: 8085
           readinessProbe:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
             successThreshold: 1
             httpGet:
-              path: /actuator/health/readiness
-              port: 8081
+              path: /health/readiness
+              port: 8085
           livenessProbe:
             periodSeconds: 60
             timeoutSeconds: 3
             failureThreshold: 3
             successThreshold: 1
             httpGet:
-              path: /actuator/health/liveness
-              port: 8081
+              path: /health/liveness
+              port: 8085
