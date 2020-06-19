@@ -6,22 +6,18 @@ import eu.nighttrains.booking.service.BookingNotFoundException;
 import eu.nighttrains.booking.service.BookingService;
 import eu.nighttrains.booking.service.NoConnectionsAvailableException;
 import eu.nighttrains.booking.service.UnauthorizedBookingAccess;
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.info.Contact;
-import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.info.License;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.servers.Server;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.security.Principal;
@@ -64,7 +60,7 @@ public class BookingEndpoint {
     @Tag(name = BookingEndpoint.OPEN_API_TAG_NAME_BOOKING)
     @GetMapping(value = "/booking/{id}")
     public ResponseEntity<BookingDto> findById(
-            @PathVariable("id") String id,
+            @PathVariable("id") @NotBlank String id,
             @AuthenticationPrincipal Principal principal
     ) {
         try {
@@ -98,7 +94,7 @@ public class BookingEndpoint {
     @Tag(name = BookingEndpoint.OPEN_API_TAG_NAME_BOOKING)
     @PostMapping(value = "/booking")
     public ResponseEntity<BookingDto> book(
-            @RequestBody BookingRequestDto bookingRequestDto,
+            @RequestBody @Valid BookingRequestDto bookingRequestDto,
             @AuthenticationPrincipal Principal principal
     ) {
         try {
