@@ -27,9 +27,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "gen-timetable-api": "rm -rf ./src/api/timetable && openapi-generator generate -i http://192.168.185.148:31210/v3/api-docs/timetable --generator-name typescript-fetch -o ./src/api/timetable --config ./api-docs/timetable.config.json && cd ./src/api/timetable && yarn",
-    "gen-booking-api": "rm -rf ./src/api/booking && openapi-generator generate -i http://192.168.185.148:31210/v3/api-docs/booking --generator-name typescript-fetch -o ./src/api/booking --config ./api-docs/booking.config.json && cd ./src/api/booking && yarn"
-
+    "gen-timetable-api": "rm -rf ./src/api/timetable && openapi-generator generate -i http://localhost:8081/v3/api-docs/timetable --generator-name typescript-fetch -o ./src/api/timetable --config ./api-docs/timetable.config.json && cd ./src/api/timetable && yarn",
+    "gen-booking-api": "rm -rf ./src/api/booking && openapi-generator generate -i http://localhost:8081/v3/api-docs/booking --generator-name typescript-fetch -o ./src/api/booking --config ./api-docs/booking.config.json && cd ./src/api/booking && yarn"
   },
   "eslintConfig": {
     "extends": "react-app"
