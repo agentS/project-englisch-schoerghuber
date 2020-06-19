@@ -20,8 +20,8 @@ public class WebSecurityConfig {
 				.authorizeExchange()
 						.anyExchange().permitAll()
 						.and()
-				.oauth2Login()
-						.and()
+				//.oauth2Login()
+				//		.and()
 				.oauth2ResourceServer()
 						.jwt();
 		return http.build();
