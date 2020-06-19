@@ -31,3 +31,6 @@ opentracing:
     udp-sender:
       host: jaeger-service-spring
       port: 6831
+
+cors:
+  origin: "http://localhost:3000"
