@@ -9,6 +9,7 @@ spec:
       app: booking
   template:
     metadata:
+      name: booking-pod
       labels:
         app: booking
     spec:
