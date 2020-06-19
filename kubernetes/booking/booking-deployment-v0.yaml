@@ -1,37 +1,39 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: notification
+  name: booking
 spec:
-  replicas: 2
+  replicas: 3
+  strategy:
+    type: RollingUpdate
   selector:
     matchLabels:
-      app: notification
+      app: booking
   template:
     metadata:
-      name: notification-pod
+      name: booking-pod
       labels:
-        app: notification
+        app: booking
     spec:
       containers:
-        - name: notification
-          image: notification:latest
+        - name: booking
+          image: booking:0
           imagePullPolicy: "IfNotPresent"
           ports:
-            - containerPort: 8085
+            - containerPort: 8084
           readinessProbe:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 3
             successThreshold: 1
             httpGet:
-              path: /health/readiness
-              port: 8085
+              path: /actuator/health/readiness
+              port: 8084
           livenessProbe:
             periodSeconds: 60
             timeoutSeconds: 3
             failureThreshold: 3
             successThreshold: 1
             httpGet:
-              path: /health/liveness
-              port: 8085
+              path: /actuator/health/liveness
+              port: 8084
