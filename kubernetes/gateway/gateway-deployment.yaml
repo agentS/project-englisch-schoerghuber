@@ -9,6 +9,7 @@ spec:
       app: gateway
   template:
     metadata:
+      name: gateway-pod
       labels:
         app: gateway
     spec:

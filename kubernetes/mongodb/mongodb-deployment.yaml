@@ -9,6 +9,7 @@ spec:
       app: mongodb
   template:
     metadata:
+      name: mongodb-pod
       labels:
         app: mongodb
     spec:

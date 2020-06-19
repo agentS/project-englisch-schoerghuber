@@ -9,6 +9,7 @@ spec:
       app: postgresql
   template:
     metadata:
+      name: postgresql-pod
       labels:
         app: postgresql
     spec:

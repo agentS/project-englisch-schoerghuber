@@ -28,7 +28,7 @@ class FeignServiceTest {
 			assertEquals(14, connections.size());
 			assertEquals("NJ 466", connections.get(0).getTrainConnection().getCode());
 			assertEquals("Wien Hauptbahnhof", connections.get(0).getDepartureStation().getName());
-			assertEquals("ZÃ¼rich", connections.get(13).getArrivalStation().getName());
+			assertEquals("Zürich", connections.get(13).getArrivalStation().getName());
 		});
 
 	}

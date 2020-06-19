@@ -9,6 +9,7 @@ spec:
       app: jaeger
   template:
     metadata:
+      name: jaeger-pod
       labels:
         app: jaeger
     spec:

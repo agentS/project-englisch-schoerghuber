@@ -14,11 +14,11 @@ import java.util.List;
 
 @Service
 public class TimeTableServiceRest implements TimeTableService {
-	private final TimeTableRestClientFeignWrapper timeTableRestClient;
+	private final TimeTableRestClientFeign timeTableRestClient;
 	private final CircuitBreakerFactory circuitBreakerFactory;
 
 	public TimeTableServiceRest(
-			@Autowired TimeTableRestClientFeignWrapper timeTableRestClient,
+			@Autowired TimeTableRestClientFeign timeTableRestClient,
 			@Autowired CircuitBreakerFactory circuitBreakerFactory
 	) {
 		this.timeTableRestClient = timeTableRestClient;

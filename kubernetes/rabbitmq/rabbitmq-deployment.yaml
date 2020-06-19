@@ -13,6 +13,7 @@ spec:
       app: rabbitmq
   template:
     metadata:
+      name: rabbitmq-pod
       labels:
         app: rabbitmq
     spec:

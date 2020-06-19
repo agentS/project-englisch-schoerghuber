@@ -9,6 +9,7 @@ spec:
       app: notification
   template:
     metadata:
+      name: notification-pod
       labels:
         app: notification
     spec:
