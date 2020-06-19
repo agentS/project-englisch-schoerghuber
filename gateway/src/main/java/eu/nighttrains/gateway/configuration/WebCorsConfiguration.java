@@ -1,5 +1,6 @@
 package eu.nighttrains.gateway.configuration;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
@@ -10,13 +11,17 @@ import java.util.List;
 
 @Configuration
 public class WebCorsConfiguration {
+	@Value("${cors.origin}")
+	private String corsOrigin;
+
 	@Bean
 	public CorsWebFilter corsWebFilter() {
 		CorsConfiguration corsConfiguration = new CorsConfiguration();
-		corsConfiguration.setAllowedOrigins(List.of("*"));
+		corsConfiguration.setAllowedOrigins(List.of(this.corsOrigin));
 		corsConfiguration.setMaxAge(3600L);
 		corsConfiguration.setAllowedMethods(List.of("*"));
 		corsConfiguration.setAllowedHeaders(List.of("*"));
+		corsConfiguration.setAllowCredentials(true);
 
 		UrlBasedCorsConfigurationSource corsConfigurationSource
 				= new UrlBasedCorsConfigurationSource();

@@ -5,7 +5,7 @@ import {Nav, Navbar} from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 import {TimetableApi} from "./api/timetable";
-import {BookingApi} from "./api/booking";
+import {BookingApi, Configuration} from "./api/booking";
 
 import ConnectionSearch from "./timetable/ConnectionSearch";
 import DiscoverySearch from "./timetable/DiscoverySearch";
@@ -17,7 +17,7 @@ class App extends React.Component {
 	render() {
 
 		const timetableApi = new TimetableApi();
-		const bookingApi = new BookingApi();
+		const bookingApi = new BookingApi(new Configuration({ credentials: "include" }));
 
 		const connectionSearch = () => (<ConnectionSearch timetableApi={timetableApi}/>);
 		const discoverySearch = () => (<DiscoverySearch timetableApi={timetableApi}/>);
