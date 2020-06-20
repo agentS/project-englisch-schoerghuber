@@ -11,13 +11,19 @@ import java.util.List;
 
 @Configuration
 public class WebCorsConfiguration {
-	@Value("${cors.origin}")
-	private String corsOrigin;
+	@Value("${cors.origins.webFrontend}")
+	private String corsOriginWebFrontend;
+
+	@Value("${cors.origins.swaggerUI}")
+	private String corsOriginSwaggerUI;
 
 	@Bean
 	public CorsWebFilter corsWebFilter() {
 		CorsConfiguration corsConfiguration = new CorsConfiguration();
-		corsConfiguration.setAllowedOrigins(List.of(this.corsOrigin));
+		corsConfiguration.setAllowedOrigins(List.of(
+				this.corsOriginWebFrontend,
+				this.corsOriginSwaggerUI
+		));
 		corsConfiguration.setMaxAge(3600L);
 		corsConfiguration.setAllowedMethods(List.of("*"));
 		corsConfiguration.setAllowedHeaders(List.of("*"));
