@@ -1691,10 +1691,36 @@ Daniel
 
 Lukas
 
+Das Notification-Service schickt bei Änderungen des Buchungsstatus Update-E-Mails aus.
+In der E-Mail befindet sich ein Link, mit der auf die Frontend-Webseite mit dem Ticket zugegriffen werden kann.
+In der unten zu sehenden Abbildung ist eine solche generierte E-Mail zu sehen, wobei der Link auf die Detailseite für dieses Ticket verweist.
+
+![Bestätigungs-E-Mail für Buchung](doc/notification/confirmationEmail.png)
+
+Nun kann die Situation, dass der Timetable-Service nicht verfügbar ist durch das Löschen das Timetable-Services mit dem Befehl `kubectl delete svc timetable` simuliert werden.
+Wird nun eine Buchung ausgeführt, wird zuerst ein E-Mail, dass die Buchung reserviert ist, versendet, wie im folgenden Screenshot ersichtlich ist.
+
+![Reservierungs-E-Mail für Buchung](doc/notification/reservationEmail.png)
+
+In regelmäßigen Abständen nach einem konfigurierbaren Interval prüft der Booking-Service, ob der Timetable-Service wieder erreichbar ist, um allfällige lediglich reservierte Buchungen zu besätigen oder aufgrund von Überbuchung abzulehnen.
+Im unteren Screenshot einer E-Mail ist die Bestätigungs-E-Mail für die Buchung, für die in der obrigen Abbildung die Reservierungs-E-Mail angezeigt ist, ersichtlich.
+
+![Bestätigungs-E-Mail für zuvor reservierte Buchung](doc/notification/confirmationEmailAfterReservation.png)
+
 ## Rolling-Update
 
 Daniel
 
 ## Tracing
 
-Lukas
+Mittels Tracing mit Jaeger können Requests zwischen den Services nachverfolgt werden und somit wertvolle Informationen beim Debugging von Requests aufgezeichnet werden.
+Im unten zu sehenden Screenshot sind die Tracing-Ausgaben für eine erfolgreiche Buchung zu sehen.
+Hier ist sehr gut zu sehen, dass das API-Gateway den Request an den Booking-Service weiterleitet, welcher zweimal den Timetable-Service aufruft, um die Route zwischen den angegebenen Stationen sowie die zur Verfügung stehenden Wagons auf dieser Verbindung zu laden.
+
+![Tracing-Ausgabe einer erfolgreichen Buchung](doc/tracing/tracingConfirmedBooking.png)
+
+Schlägt ein Aufruf fehl, weil z.B. der Timetable-Service nicht erreichbar ist, wird das entsprechend mit einem Fehler angezeigt, wie im unteren Bild angezeigt hat.
+Hier ist ersichtlich, dass der Aufruf des Timetable-Services durch den Booking-Service fehl schlägt.
+Daher wird die Buchung nur reserviert und nicht direkt bestätigt.
+
+![Tracing-Ausgabe einer erfolgreichen Buchung](doc/tracing/tracingReservedBooking.png)
