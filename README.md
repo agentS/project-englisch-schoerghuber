@@ -1097,6 +1097,8 @@ Der Inhalt der Datei ist im folgenden Listing zu sehen.
 Interessant ist dabei, dass ein Node-Port-Service erzeugt wird.
 Dies resultiert aufgrund der Tatsache, dass ein Minikube-Cluster nur aus einem Worker-Knoten besteht und ein Load-Balancing über die Knoten ohnehin keinen Sinn macht.
 Innerhalb des Nodes führt ein Service regulär ein Node-Balancing über die Pods durch.
+Dadurch wird das von uns gewünschte Load-Balancing erreicht ohne auf Spring Cloud Ribbon zurückgreifen zu müssen.
+
 Ebenso kann man im Deployment-Deskriptor gut erkennen, dass 3 Replikas erzeugt werden und dass sowohl eine Liveness- als auch eine Readiness-Probe durchgeführt werden.
 Darüber hinaus ist zu sehen, dass die Version für das Deployment direkt aus der Maven-Konfigurationsdatei `pom.xml` übernommen wird.
 
@@ -1200,6 +1202,17 @@ spec:
 
 ```
 
+Nach dem Deployment sind die Pods auf dem Container ersichtlich, wie die folgende Ausgabe zeigt:
+
+```bash
+$ kubectl get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+...                             ...     ...       ...        ...
+timetable-5b8fb68ff-9dh5f       1/1     Running   0          19m
+timetable-5b8fb68ff-w5b67       1/1     Running   0          18m
+timetable-5b8fb68ff-zxdsj       1/1     Running   0          18m
+```
+
 ### Konfiguration
 
 Zur Betrieb der Timetable-Container müssen einige Konfigurationseinstellungen angepasst werden.
@@ -1221,9 +1234,113 @@ quarkus.jaeger.endpoint = http://jaeger-service-quarkus:14268/api/traces
 
 Lukas
 
-### Konfiguration
+Für den Booking-Service muss zuerst ein Docker-Container erstellt werden.
+Hierzu ist im ersten Schritt eine Release-Version des Fat-JARs zu erstellen.
+Dies kann einfach durch Ausführung des Kommandos `mvn clean package` innerhalb des Verzeichnisses für den Timetable-Service erreicht werden.
 
-Lukas
+Als Nächstes ist der entsprechende Docker-Container zu erzeugen.
+Hierfür wird von uns das folgende Dockerfile verwendet, welches in der Datei `Dockerfile` im Ordner `/booking` liegt:
+
+```Dockerfile
+FROM adoptopenjdk/openjdk11:alpine
+RUN mkdir /opt/app
+COPY ./target/booking-0.jar /opt/app
+EXPOSE 8084
+CMD ["java", "-Dspring.profiles.active=kubernetes,security-kubernetes", "-jar", "/opt/app/booking-0.jar"]
+```
+
+Das oben angegebene Dockerfile verwendet ein OpenJDK-11-Image und kopiert das Fat-JAR in das Archiv.
+Anschließend wird die Anwendung von der Konsole aus gestartet, wobei als aktive Profile *kubernetes* und *kubernetes-security* angegeben werden.
+
+Die wesentlichen für den Betrieb in Kubernetes relevanten Einstellungen in der Datei `application-kubernetes.properties` sind die Angabe der Service-DNS-Einträge als Hosts für MongoDB, RabbitMQ und Jaeger, welche unten zu sehen sind.
+Ebenfalls zu sehen ist, dass für das Timetable-Service der Service-DNS-Name verwendet wird.
+
+```properties
+spring.data.mongodb.host=mongodb-service
+spring.rabbitmq.host=rabbitmq-service
+opentracing.jaeger.udp-sender.host=jaeger-service-spring
+timetable.url=http://timetable:8082/
+```
+
+Die Einstellungen für das Profil *security-kubernetes* entsprechen genau jenen für das Profil *security*, welche in der Sektion zur Authentifizierung im Booking-Service beschrieben sind.
+
+Das Erzeugen des Containers und das Hochladen auf die Minikube-Registry kann mit den folgenden zwei Befehlen erfolgen:
+
+```bash
+eval $(minikube -p minikube docker-env)
+docker build --file Dockerfile --tag booking:0 .
+```
+
+Anschließend können die Deskriptoren für das Deployment und den Service erstellt werden.
+Die folgende YAML-Datei zeigt den Deskriptor für den Service.
+Hierfür wird ein Load-Balancer-Service definiert, was von der Minikube-Distribution zwar verstanden wird, aber den gleichen Effekt wie ein Node-Port-Service hat, da es ja nur einen Node gibt und über diesen kein Load-Balancing durchgeführt werden kann.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: booking-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8084
+    targetPort: 8084
+  selector:
+    app: booking
+```
+
+Der unten angegebene Deskriptor ist der Deployment-Deskriptor für die Version 0 des Booking-Services.
+Hierbei wird wieder festgelegt, dass 3 Replikate verwendet werden, dass ein Rolling-Release-Update durchgeführt werden soll.
+Ebenso werden für die Health- und Liveness-Probe die von Spring Boot Actuator bereitgestellten Endpunkte angegeben.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: booking
+  template:
+    metadata:
+      name: booking-pod
+      labels:
+        app: booking
+    spec:
+      containers:
+        - name: booking
+          image: booking:0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 8084
+          readinessProbe:
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8084
+          livenessProbe:
+            periodSeconds: 60
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8084
+```
+
+Anschließend können Service und Deployment mit den folgenden zwei Befehlen auf Kubernetes ausgerollt werden:
+
+```bash
+kubectl apply -f booking-service.yaml
+kubectl apply -f booking-deployment-v0.yaml
+```
 
 ## Gateway
 
@@ -1262,6 +1379,10 @@ Daniel
 Daniel
 
 # Frontend
+
+Daniel
+
+## OpenAPI-Code-Generator
 
 Daniel
 
