@@ -958,11 +958,59 @@ Um die Health-Checks zu implementieren, ist lediglich die folgende Abhängigkeit
 
 # Notification
 
-Lukas
+Das Notification-Service registriert sich als Subscriber für Buchungsänderungsbenachrichtigungen auf dem RabbitMQ-Server und versendet E-Mail-Benachrichtigungen an den Benutzer, dessen E-Mail-Adresse für die Buchung angegeben ist.
+Mehrere Instanzen des Notification-Services verarbeiten dabei konkurrierend AMQP-Messages nach dem Worker-Queue-Prinzip.
+
+Für die Implementierung wird das Toolkit [Vert.x](https://www.vertx.io/) verwendet.
+Da Vert.x Unterstützung für mehrere JVM-basierte Programmiersprachen bietet, ist das Service mit Kotlin implementiert.
+
+Im Hauptverticle werden drei Verticles gestartet:
+
+- Ein Verticle implementiert einen AMQP-Listener und sendet E-Mail-Requests über den Vert.x-Event-Bus.
+- Ein Verticle hört auf E-Mail-Requests auf dem Event-Bus und versendet beim Empfang solcher E-Mail-Benachrichtigungen.
+- Ein Verticle stellt einen Endpunkt für Health-Checks für die Kubernetes-Probes zur Verfügung.
+
+## Benachrichtigungslogik
+
+Das AMQP-Listener-Verticle, welches in der Klasse `AmqpListenerVerticle` implementiert ist, verbindet sich wärhend der Initialisierung mit dem RabbitMQ-Server und registriert Handler für Nachrichten auf den drei Queues für Buchungsstatusänderungen (reservierte, bestätigte und abgelehnte Buchungen).
+Jeder der Handler befüllt aus der JSON-Buchung eine Data-Class für den E-Mail-Requests und sendet den JSON-serialisierten Request anschließend über den Event-Bus an das E-Mail-Benachrichtigungs-Verticle.
+
+Das E-Mail-Sender-Verticle, welches in der Klasse `MailSenderVerticle` implementiert ist, erstellt einen Connection-Pool für die Verbindung zum E-Mail-Server und registriert sich anschließend am Event-Bus.
+Bei einem eingehenden E-Mail-Request wird eine E-Mail an den angegebenen Empfänger versendet.
 
 ## Health-Checks
 
-Lukas
+Die Implementierung des Health-Checks-Verticle erfolgt mit dem [Health-Framework](https://vertx.io/docs/vertx-health-check/kotlin/) und dem [HTTP-Framework](https://vertx.io/docs/vertx-web/kotlin/) von Vert.x.
+Dabei wird ein Health-Check für die Readiness-Probe implementiert, welcher überprüft, ob die Anzahl der deployten Verticles der gewünschten Anzahl von 4 entspricht.
+Da Vert.x mit der Kommunikation über Verticles hinaus sehr restriktiv ist, sendet der Live-Check lediglich eine leere Antwort zurück.
+Trotzdem kann Kubernetes überprüfen, dass der Service noch erreichbar ist, da z.B. bei einem `OutOfMemoryError` keine Rückmeldung erfolgen würde.
+Der Code für die Health-Checks ist im unteren Code-Listing angeführt.
+
+```kotlin
+class HealthCheckVerticle : AbstractVerticle() {
+	override fun start(startPromise: Promise<Void>) {
+		val server = this.vertx.createHttpServer()
+		val navigator = Router.router(this.vertx)
+		val healthCheckHandler = HealthCheckHandler.create(this.vertx)
+		healthCheckHandler.register("readiness") { future ->
+			if (this.vertx.deploymentIDs().size == NUMBER_OF_VERTICLES) {
+				future.complete()
+			} else {
+				future.fail("Deployment not yet finished")
+			}
+		}
+		healthCheckHandler.register("liveness") { future ->
+			future.complete()
+		}
+		navigator.get("/health*").handler(healthCheckHandler)
+		server
+			.requestHandler(navigator)
+			.listen(this.config().getInteger("port"))
+
+		startPromise.complete()
+	}
+}
+```
 
 # Kubernetes
 
@@ -1024,6 +1072,10 @@ Daniel
 
 Daniel
 
+## Authentifizierung
+
+Daniel
+
 # Ergebnisse
 
 ## Frontend
@@ -1034,16 +1086,10 @@ Daniel
 
 Lukas
 
-# Authentifizierung
+## Rolling-Update
 
-## API-Gateway und Services
-
-Lukas
+Daniel
 
 ## Tracing
 
 Lukas
-
-## Frontend
-
-Daniel
