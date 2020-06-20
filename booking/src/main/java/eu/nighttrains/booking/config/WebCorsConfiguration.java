@@ -12,7 +12,9 @@ public class WebCorsConfiguration {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                registry.addMapping("/**").allowedOrigins("*");
+                //registry.addMapping("/**").allowedOrigins("*");
+                // This line above generates a multiple CORS origin error when calling
+                // the booking api via the gateway.
             }
         };
     }
