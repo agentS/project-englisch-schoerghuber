@@ -29,7 +29,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
                 )
         ),
         //servers = @Server(url = "http://192.168.185.148:31210/booking/", description = "Booking API development server"),
-        servers = @Server(url = "http://localhost:8084/booking/", description = "Booking API development server"),
+        servers = @Server(url = "http://localhost:8081/booking/", description = "Booking API development server"),
         tags = @Tag(name = BookingEndpoint.OPEN_API_TAG_NAME_BOOKING, description = "Booking-related endpoints")
 )
 public class BookingApplication {
