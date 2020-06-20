@@ -35,4 +35,4 @@ opentracing:
 cors:
   origins:
     webFrontend: "http://localhost:3000"
-    swaggerUI: "http://localhost:8081"
+    swaggerUI: "http://192.168.99.100:30272"

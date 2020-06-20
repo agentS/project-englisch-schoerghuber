@@ -1199,7 +1199,6 @@ spec:
           successThreshold: 1
           timeoutSeconds: 10
       serviceAccount: "timetable"
-
 ```
 
 Nach dem Deployment sind die Pods auf dem Container ersichtlich, wie die folgende Ausgabe zeigt:
@@ -1232,8 +1231,6 @@ quarkus.jaeger.endpoint = http://jaeger-service-quarkus:14268/api/traces
 
 ## Booking
 
-Lukas
-
 Für den Booking-Service muss zuerst ein Docker-Container erstellt werden.
 Hierzu ist im ersten Schritt eine Release-Version des Fat-JARs zu erstellen.
 Dies kann einfach durch Ausführung des Kommandos `mvn clean package` innerhalb des Verzeichnisses für den Timetable-Service erreicht werden.
@@ -1254,6 +1251,7 @@ Anschließend wird die Anwendung von der Konsole aus gestartet, wobei als aktive
 
 Die wesentlichen für den Betrieb in Kubernetes relevanten Einstellungen in der Datei `application-kubernetes.properties` sind die Angabe der Service-DNS-Einträge als Hosts für MongoDB, RabbitMQ und Jaeger, welche unten zu sehen sind.
 Ebenfalls zu sehen ist, dass für das Timetable-Service der Service-DNS-Name verwendet wird.
+Ansonsten entspricht die Konfiguration praktisch jener in der Datei `application-development.properties`.
 
 ```properties
 spring.data.mongodb.host=mongodb-service
@@ -1335,7 +1333,7 @@ spec:
               port: 8084
 ```
 
-Anschließend können Service und Deployment mit den folgenden zwei Befehlen auf Kubernetes ausgerollt werden:
+Abschließend können Service und Deployment mit den folgenden zwei Befehlen auf Kubernetes ausgerollt werden:
 
 ```bash
 kubectl apply -f booking-service.yaml
@@ -1344,11 +1342,132 @@ kubectl apply -f booking-deployment-v0.yaml
 
 ## Gateway
 
-Lukas
+Für das API-Gateway ist ebenfalls zuerst ein Docker-Container zu erstellen.
+Der erste Schritt besteht erneut aus der Erstellung eines Fat-JARs durch Ausführung des Kommandos `mvn clean package` innerhalb des Verzeichnisses für das API-Gateway.
 
-### Konfiguration
+Der nächste Schritt besteht nun in der Erstellung des Docker-Containers.
+Hierfür wird das folgende einfache Docker-File verwendet, welches erneut den OpenJDK-11-Container hernimmt und das Fat-JAR in das Image übernimmt.
+Anschließend wird der Port 8081 exportiert und das Gatewy mit den Profilen *kubernetes*  und *security-kubernetes* gestartet.
 
-Lukas
+```Dockerfile
+FROM adoptopenjdk/openjdk11:alpine
+RUN mkdir /opt/app
+COPY ./target/gateway-0.jar /opt/app
+EXPOSE 8081
+CMD ["java", "-Dspring.profiles.active=kubernetes,security-kubernetes", "-jar", "/opt/app/gateway-0.jar"]
+```
+
+Die wesentlichen Unterschiede der Konfigurationsdatei für das Profil *kubernetes* von jener für das Profil *development* sind die Verwendung von Service-DNS-Namen.
+Ebenso sind die Origins für die CORS-Konfiguration angespasst.
+Das unten ersichtliche Listing zeigt einen Ausschnit aus der Konfigurationsdatei `application-kubernetes.yml`.
+
+```yaml
+server:
+  port: 8081
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: timetable
+        uri: http://timetable:8082/
+        # ...
+      - id: booking
+        uri: http://booking-service:8084/
+        # ...
+    # ...
+
+cors:
+  origins:
+    webFrontend: "http://localhost:3000"
+    swaggerUI: "http://192.168.99.100:30272"
+```
+
+Ebenso beinhaltet die Konfigurationsdatei für das Profil *security-kubernetes* die Keys für das Okta-Profil für den Betrieb des Kubernetes-Clusters.
+
+Als Nächstes kann der Docker-Container erzeugt werden und zwar mit den folgenden Befehlen:
+
+```bash
+eval $(minikube -p minikube docker-env)
+docker build --file Dockerfile --tag gateway:0 .
+```
+
+Der Deskriptor für das Service, welcher im folgenden Listing ersichtlich ist, verwendet wieder ein Load-Balancer-Service, was bei der Verwendung von Minikube jedoch gleich mit einem Node-Port-Service ist.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8081
+    targetPort: 8081
+  selector:
+    app: gateway
+```
+
+Der Deployment-Deskriptor, welcher im unten ersichtlichen Codeausschnitt zu sehen ist, legt fest, dass 2 Replikate gleichzeitig betrieben werden und dass für die Kubernetes-Probes die von Spring-Boot-Actuator zur Verfügung gestellten Endpunkte verwendet werden.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      name: gateway-pod
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: gateway:0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 8081
+          readinessProbe:
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8081
+          livenessProbe:
+            periodSeconds: 60
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8081
+```
+
+Das Anwenden der Konfiguration kann wieder mit unten ersichtlichen zwei Befehlen erfolgen.
+
+```bash
+kubectl apply -f gateway-service.yaml
+kubectl apply -f gateway-deployment-v0.yaml
+```
+
+Nach dem Deployment sollten die Pods in der Ausgabe sichtbar sein:
+
+```bash
+$ kubectl get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+...                             ...     ...       ...        ...
+gateway-555cc8f89b-4glfs        1/1     Running   0          57s
+gateway-555cc8f89b-6g6ww        1/1     Running   0          38s
+```
 
 ## Notification
 
