@@ -1239,7 +1239,7 @@ Als Nächstes ist der entsprechende Docker-Container zu erzeugen.
 Hierfür wird von uns das folgende Dockerfile verwendet, welches in der Datei `Dockerfile` im Ordner `/booking` liegt:
 
 ```Dockerfile
-FROM adoptopenjdk/openjdk11:alpine
+FROM adoptopenjdk/openjdk11:alpine-jre
 RUN mkdir /opt/app
 COPY ./target/booking-0.jar /opt/app
 EXPOSE 8084
@@ -1350,7 +1350,7 @@ Hierfür wird das folgende einfache Docker-File verwendet, welches erneut den Op
 Anschließend wird der Port 8081 exportiert und das Gatewy mit den Profilen *kubernetes*  und *security-kubernetes* gestartet.
 
 ```Dockerfile
-FROM adoptopenjdk/openjdk11:alpine
+FROM adoptopenjdk/openjdk11:alpine-jre
 RUN mkdir /opt/app
 COPY ./target/gateway-0.jar /opt/app
 EXPOSE 8081
@@ -1471,11 +1471,183 @@ gateway-555cc8f89b-6g6ww        1/1     Running   0          38s
 
 ## Notification
 
-Lukas
+Für den Notification-Service muss wieder zuerst ein Docker-Container erzeugt werden.
+Allerdings stellt das Vert.x-Team eine [Anleitung zur Erzeugung eines solchen Containers mittels Maven](https://vertx.io/docs/vertx-docker/#_build_docker_images_with_maven) zur Verfügung.
+Diese Anleitung verwendet das [Maven-Plug-In von Spotify](https://github.com/spotify/docker-maven-plugin) um einen Docker-Container zu erzeugen.
+
+Dieses Plug-In erzeugt aus dem Fat-JAR, welches als Ergebnis der Package-Phase anfällt und dem Dockerfile, welches unter `src/main/docker/Dockerfile` liegt und dessen Inhalt unterhalb im Listing unterhalb der Konfiguration für das Maven-Plug-In angezeigt wird einen Docker-Container und veröffentlicht diesen auf der Registry.
+In der Maven-Konfiguration erwähnenswert ist, dass zwei Ressourcen, welche das Fat-JAR und die Konfiguration beinhalten, durch die Angaben im Tag `resources` im Dockerfile verfügbar gemacht werden.
+Ebenso wird ein Tagging des Containers mit der Version des Projektes vorgenommen.
+
+```xml
+<plugins>
+	<build>
+		<plugin>
+			<groupId>com.spotify</groupId>
+			<artifactId>docker-maven-plugin</artifactId>
+			<version>0.2.8</version>
+			<executions>
+				<execution>
+					<id>docker</id>
+					<phase>package</phase>
+					<goals>
+						<goal>build</goal>
+					</goals>
+				</execution>
+			</executions>
+			<configuration>
+				<dockerDirectory>${project.basedir}/src/main/docker</dockerDirectory>
+				<imageName>notification</imageName>
+				<imageTags>
+					<imageTag>${project.version}</imageTag>
+					<imageTag>latest</imageTag>
+				</imageTags>
+				<resources>
+					<resource>
+						<targetPath>/verticles</targetPath>
+						<directory>${project.build.directory}</directory>
+						<includes>
+							<include>${project.artifactId}-${project.version}-fat.jar</include>
+						</includes>
+					</resource>
+					<resource>
+						<targetPath>/configuration</targetPath>
+						<directory>${project.basedir}</directory>
+						<includes>
+							<include>configuration-kubernetes.json</include>
+						</includes>
+					</resource>
+					<!-- don't forget to also add all the dependencies required by your application -->
+				</resources>
+			</configuration>
+		</plugin>
+	</plugins>
+</build>
+```
+
+Das Dockerfile baut auf das OpenJDK-11-Image auf und kopiert im wesentlichen die über die Maven-Konfiguration bekanntgegenen Ressourcen, nämlich das Fat-JAR und die Konfigurationsdatei für Kubernetes, in die entsprechenden Verzeichnisse im Docker-Container.
+
+```Dockerfile
+###
+# vert.x docker example using a Java verticle
+# To build:
+#  docker build -t notification .
+# To run:
+#   docker run -t -i --rm -p 8085:8085 notification
+###
+
+# Extend vert.x image
+FROM adoptopenjdk/openjdk11:alpine-jre
+
+ENV VERTICLE_FILE ./target/notification-0-fat.jar
+ENV CONFIGURATION_FILE_NAME ./configuration-kubernetes.json
+
+# Set the location of the verticles
+ENV VERTICLE_HOME /opt/application
+
+EXPOSE 8085
+
+# Copy your verticle to the container
+COPY ./verticles $VERTICLE_HOME
+COPY ./configuration/configuration-kubernetes.json $VERTICLE_HOME/configuration.json
+
+# Launch the verticle
+WORKDIR "/opt/application/"
+CMD ["java", "-jar", "/opt/application/notification-0-fat.jar"]
+```
+
+Das Bauen und Veröffentlichen des Containers auf der Registry kann mit den folgenden Befehlen angestoßen werden:
+
+```bash
+eval $(minikube -p minikube docker-env)
+mvn clean package -Dmaven.test.skip=true
+```
+
+Anschließend kann das Deployment auf Kubernetes vorgenommen werden.
+Da der Notification-Service überhaupt nicht von außen erreichbar sein soll, wird für diesen lediglich ein Deployment-Deskriptor benötigt.
+Im Deployment-Deskriptor wird wieder angegeben, dass 2 Replikate betrieben werden, welche gemäß dem Worker-Queue-Pattern konkurrierend auf die AMQP-Nachrichten zugreifen.
+Ebenso werden für die Kubernetes-Probes die mit Vert.x-Web und Vert.x-Health-Check implementierten Endpunkte verwendet.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: notification
+  template:
+    metadata:
+      name: notification-pod
+      labels:
+        app: notification
+    spec:
+      containers:
+        - name: notification
+          image: notification:0
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 8085
+          readinessProbe:
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /health/readiness
+              port: 8085
+          livenessProbe:
+            periodSeconds: 60
+            timeoutSeconds: 3
+            failureThreshold: 3
+            successThreshold: 1
+            httpGet:
+              path: /health/liveness
+              port: 8085
+```
+
+Das Deployment kann durch den folgenden Befehl ausgerollt werden:
+
+```bash
+kubectl apply -f notification-deployment-v0.yaml
+```
+
+Zum Abschluss können die Pods noch in der Liste der laufenden Pods angezeigt werden.
+
+```bash
+$ kubectl get pods
+NAME                            READY   STATUS    RESTARTS   AGE
+...                             ...     ...       ...        ...
+notification-5b9cd65cb-f4pgj   1/1     Running   0          3m21s
+notification-5b9cd65cb-nt4wx   1/1     Running   0          3m15s
+```
 
 ### Konfiguration
 
-Lukas
+In der Konfiguration für den Kubernetes-Betrieb muss erneut der Hostname des RabbitMQ-Servers angepasst werden.
+Ebenso kann es erforderlich sein, die URL des Web-Frontends anzupassen.
+Das folgende Quellcodelisting zeigt die wesentlichen Ausschnitte aus dem JSON-Dokument zur Konfiguration für den Betrieb des Notification-Services in Kubernetes.
+
+```json
+{
+	"amqp":
+	{
+		"host": "rabbitmq-service",
+		"port": 5672,
+		"username": "guest",
+		"password": "guest",
+		"confirmationQueueName": "bookingstatusupdatesqueue.confirmed",
+		"reservationQueueName": "bookingstatusupdatesqueue.reserved",
+		"rejectionQueueName": "bookingstatusupdatesqueue.rejected",
+		"webFrontendBaseUrl": "http://localhost:3000"
+	},
+	// ...
+}
+``` 
 
 ## Infrastruktur-Services
 
