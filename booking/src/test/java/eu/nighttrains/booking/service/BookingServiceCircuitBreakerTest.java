@@ -3,10 +3,10 @@ package eu.nighttrains.booking.service;
 import eu.nighttrains.booking.dto.BookingDto;
 import eu.nighttrains.booking.model.BookingStatus;
 import eu.nighttrains.booking.service.config.CircuitBreakerTestConfig;
+import eu.nighttrains.booking.service.config.RabbitMqMockConfig;
 import eu.nighttrains.booking.service.rest.TimeTableRestClientFeign;
 import eu.nighttrains.timetable.model.TrainCarType;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 import org.mockito.Mockito;
 import org.mockito.internal.stubbing.answers.AnswersWithDelay;
 import org.mockito.internal.stubbing.answers.Returns;
@@ -19,8 +19,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 @SpringBootTest
-@Import(CircuitBreakerTestConfig.class)
+@Import({CircuitBreakerTestConfig.class, RabbitMqMockConfig.class})
 public class BookingServiceCircuitBreakerTest {
 	@MockBean(name = "timeTableRestClientFeign")
 	private TimeTableRestClientFeign timeTableRestClient;

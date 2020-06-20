@@ -213,19 +213,110 @@ In der unteren Abbildung ist zu sehen, dass die Testfälle des timetable-Service
 
 # Booking-Service
 
-Lukas
+Das Booking-Service verwaltet Buchungen für Züge.
+Dabei werden Buchungsanfragen entgegengenommen, die benötigten Informationen (Verbindung zwischen Abfahrts- und Ankunftsbahnhof sowie Wagons der Züge) vom Timetable-Service geladen und anschließend wird noch überprüft, ob die Buchung durchgeführt werden kann oder ob der Zug voll ist.
 
-## Health-Checks
-
-Lukas
-
-## Publishen von Buchungsstatusupdates mit AMQP
-
-Lukas
+Der Service konnte ebenfalls weitgehend aus der fünften Übung übernommen werden inklusive der Eigenschaften für Polyglot-Persistence und Eventual-Consistency.
+Im Zuge dieser Übung werden die Routen der Buchung mittels eines OAuth2-Mechanismus abgesichert
+Zusätzlich wird jetzt noch die E-Mail-Adresse des Kunden zur Buchung gespeichert.
+Über dies Information kann nun ebenfalls beim Laden der Buchung überprüft werden, ob die E-Mail-Adresse der Buchung mit jener aus dem OAuth-Token extrahierten E-Mail-Adresse übereinstimmt und bei Nichtübereinstimmung wird eine Exception ausgelöst.
 
 ## Authentifizierung
 
-Lukas
+Für die Authentifizierung wird wieder Okta als OAuth2-Provider eingesetzt.
+Dabei wird die Authentifizierung vom API-Gateway durchgeführt, was in Details später in diesem Protokoll beschrieben wird.
+
+Um einen solchen Authentifizierungsflow zu ermöglichen, sind zuerst die benötigten Dependencies zum Projekt hinzuzufügen:
+
+```xml
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<dependency>
+	<groupId>com.okta.spring</groupId>
+	<artifactId>okta-spring-boot-starter</artifactId>
+	<version>1.4.0</version>
+</dependency>
+```
+
+Als Nächstes ist in der Konfiguration einzustellen, dass auf die Endpunkte zur Verwaltung der Buchung nur nach erfolgter Authentifizierung mittels OAuth zugegriffen werden darf, während auf alle anderen Endpunkte (z.B. OpenAPI-Dokumente) auch ohne Authentifizierung zugegriffen werden darf.
+Erfolgt ein unauthorisierter Zugriff wird der HTTP-Status-Code 401 zurückgeliefert.
+Der unten ersichtliche Quellcode zeigt die Einstellungen zur Erreichung des beschriebenen Verhaltens.
+
+```java
+@Configuration
+public class WebSecurityConfiguration extends WebSecurityConfigurerAdapter {
+    @Override
+    protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable();
+        http
+                .authorizeRequests()
+                        .antMatchers("/booking").authenticated()
+                        .antMatchers("/booking/**").authenticated()
+                        .anyRequest().permitAll()
+                        .and()
+                .oauth2ResourceServer().jwt();
+
+        Okta.configureResourceServer401ResponseBody(http);
+    }
+}
+```
+
+Als Nächstes muss in der Konfiguration die Verbindung vom Booking-Service zu Okta hergestellt werden.
+Hierzu müssen die unten zu sehenden Properties gesetzt werden.
+Damit diese auch geheim bleiben, wird hierfür ein eigenes Spring-Boot-Profil definiert und die Konfigurationsdatei für dieses Profil nicht eingecheckt.
+
+```properties
+okta.oauth2.issuer = https://dev-649162.okta.com/oauth2/default
+okta.oauth2.client-id = 0oaf4thceV73lVUCp4x6
+okta.oauth2.client-secret = ...
+```
+
+Der Zugriff auf die E-Mail-Adresse von den REST-Endpunkten kann wie unten angegeben durchgeführt werden.
+Die Authentifizierungsoptionen können über einen Parameter vom Typ `Principal` injiziert werden, welcher zusätzlich mit der Annotation `@AuthenticationPrincipal` dekoriert sein muss.
+Dies ist im unten angegebenen Code-Snippet zu sehen.
+Über diesen kann anschließend die E-Mail-Adresse (bei Okta als Name gesetzt) ermittelt werden.
+
+```java
+@GetMapping(value = "/booking/{id}")
+public ResponseEntity<BookingDto> findById(
+        @PathVariable("id") @NotBlank String id,
+        @AuthenticationPrincipal Principal principal
+) {
+    try {
+        BookingDto bookingDto = bookingService.findById(id, principal.getName());
+        return new ResponseEntity<>(bookingDto, HttpStatus.OK);
+    } catch (BookingNotFoundException exception) {
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    } catch (UnauthorizedBookingAccess exception) {
+        return new ResponseEntity<>(HttpStatus.FORBIDDEN);
+    }
+}
+```
+
+Der folgende Quellcode zeigt noch den Zugriff auf die E-Mail-Adresse vom POST-Endpunkt zum Buchen eines Tickets aus.
+
+```java
+@PostMapping(value = "/booking")
+public ResponseEntity<BookingDto> book(
+        @RequestBody @Valid BookingRequestDto bookingRequestDto,
+        @AuthenticationPrincipal Principal principal
+) {
+    try {
+        BookingDto bookingDto = bookingService.book(
+                bookingRequestDto.getDepartureStationId(),
+                bookingRequestDto.getArrivalStationId(),
+                bookingRequestDto.getDepartureDate(),
+                bookingRequestDto.getTrainCarType(),
+                principal.getName()
+        );
+        return new ResponseEntity<>(bookingDto, HttpStatus.CREATED);
+    } catch (NoConnectionsAvailableException exception) {
+        return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+}
+```
 
 ## Spring Cloud OpenFeign
 
@@ -268,9 +359,291 @@ public class TimeTableRestClientFeignAdvice {
 }
 ```
 
+## Health-Checks
+
+Die Health-Checks, welche für die Livness- und Readiness-Probe benötigt werden, können mittels Spring-Boot-Actuator bereitgestellt werden.
+Hierzu muss zuerst Spring-Boot-Actuator als Dependency hinzugefügt werden:
+
+```xml
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+[Ab Spring Boot Version 2.3.0 werden die Endpunkte für Kubernetes-Health-Probes automatisch implementiert](https://docs.spring.io/spring-boot/docs/2.3.0.RELEASE/reference/html/production-ready-features.html#production-ready-kubernetes-probes).
+Dabei erkennt die Spring-Boot-Anwendung, ob sie in einer Kubernetes-Umgebung ausgeführt wird und stellt in diesem Fall Endpunkte für die Kubernetes-Probes bereit.
+
+## Publishen von Buchungsstatusupdates mit AMQP
+
+Um E-Mail-Benachrichtigungen über die Aktualisierung des Buchungsstatus versenden zu können, veröffentlicht der Booking-Service eine JSON-Repräsentation der Benachrichtigungen an eine AMQP-Direct-Exchange.
+Über den definierten Routing-Key wird die Nachricht anschließend einer von drei Queues zugewiesen, wobei eine Queue für bestätigte Buchungen, eine Queue für reservierte Buchungen und eine Queue für abgelehnte Buchungen zuständig ist.
+
+Um das Publishen von Nachrichten via AMQP 0-9-1/RabbitMQ zu ermöglichen, muss die entsprechende Abhängigkeit in die Maven-Konfigurationsdatei aufgenommen werden:
+
+```xml
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-amqp</artifactId>
+</dependency>
+```
+
+Um den Technologiecode des Sendens einer JSON-Nachricht über AMQP vom Geschäftslogikcode des Reservierens einer Buchung trennen zu können, wird definiert Schnittstelle `BookingNotificationPublisher` eine Methode zur Veröffentlichung einer Nachricht.
+
+```java
+public interface BookingNotificationPublisher {
+	void publishBookingStatusUpdate(Booking booking);
+}
+```
+
+Eine Implementierung dieser Schnittstelle veröffentlicht anschließend JSON-Repräsentierungen der Nachricht über AMQP.
+Der Quellcode der Klasse `BookingNotificationPublisherRabbitMQ` ist unten angegeben.
+Hierbei wird die Funktionalität der von Spring-Boot-AMQP bereitgestellten Komponente `RabbitTemplate` zum Publishen von Nachrichten verwendet.
+Der Routing-Key, welcher aufgrund des Direct-Exchanges das Routings der Nachricht an die entsprechende Queue wesentlich bestimmt, wird aufgrund des Wertes der Statusenumeration der veröffentlichten Buchung ermittelt.
+Zu beachten ist, dass für den JSON-Mapper in Modul zur Behandlung der Zeit- und Datumsdatentypen, die mit Java 8 eingeführt wurden, registriert wird.
+
+```java
+@Component
+public class BookingNotificationPublisherRabbitMQ implements BookingNotificationPublisher {
+	private final RabbitTemplate rabbitTemplate;
+
+	private final String exchangeName;
+	private final String routingKeyConfirmed;
+	private final String routingKeyReserved;
+	private final String routingKeyRejected;
+
+	private final Jackson2JsonMessageConverter amqpMessageConverter;
+
+	public BookingNotificationPublisherRabbitMQ(
+			@Autowired RabbitTemplate rabbitTemplate,
+			@Value("${bookingstatusupdates.exchange-name}") String exchangeName,
+			@Value("${bookingstatusupdates.routingkey.confirmed}") String routingKeyConfirmed,
+			@Value("${bookingstatusupdates.routingkey.reserved}") String routingKeyReserved,
+			@Value("${bookingstatusupdates.routingkey.rejected}") String routingKeyRejected
+	) {
+
+		this.rabbitTemplate = rabbitTemplate;
+		this.exchangeName = exchangeName;
+		this.routingKeyConfirmed = routingKeyConfirmed;
+		this.routingKeyReserved = routingKeyReserved;
+		this.routingKeyRejected = routingKeyRejected;
+
+		ObjectMapper jsonMapper = new ObjectMapper();
+		jsonMapper.registerModule(new JavaTimeModule());
+		this.amqpMessageConverter = new Jackson2JsonMessageConverter(jsonMapper);
+	}
+
+	@Override
+	public void publishBookingStatusUpdate(Booking booking) {
+		this.rabbitTemplate.convertAndSend(
+				this.exchangeName,
+				this.lookupRoutingKeyForStatus(booking.getStatus()),
+				this.serializeBooking(booking)
+		);
+	}
+
+	private Message serializeBooking(Booking booking) {
+		return this.amqpMessageConverter.toMessage(
+				booking,
+				new MessageProperties()
+		);
+	}
+
+	private String lookupRoutingKeyForStatus(BookingStatus status) {
+		switch (status) {
+			case CONFIRMED:
+				return this.routingKeyConfirmed;
+			case RESERVED:
+				return this.routingKeyReserved;
+			case REJECTED:
+				return this.routingKeyRejected;
+			default:
+				throw new IllegalArgumentException("Could not lookup routing key for booking status " + status);
+		}
+	}
+}
+```
+
+Anschließend kann eine Instanz von `BookingNotificationPublisher` in den Service `BookingServiceMongoDb` injiziert werden und zur Veröffentlichen von Buchungsstatusupdates über AMQP verwendet werden.
+
+Damit dies wie gewünscht funktioniert, muss noch eine Konfiguration erstellt werden, welche die Exchanges, die Queues sowie die Bindings entsprechend konfiguriert.
+In der unten zu sehenden Konfiguration wird der Exchange zur Veröffentlichung von Buchungsstatusupdates, die drei Queues für die jeweiligen Buchungsstatuskategorien und die entsprechenden Bindings der Exchange and die Queues mit dem gegebenen Routing-Key festgelegt.
+
+```java
+@Configuration
+public class AmqpConfiguration {
+	private final String exchangeName;
+	private final String confirmationQueueName;
+	private final String reservationQueueName;
+	private final String rejectionQueueName;
+	private final String routingKeyConfirmed;
+	private final String routingKeyReserved;
+	private final String routingKeyRejected;
+
+	public AmqpConfiguration(
+			@Value("${bookingstatusupdates.exchange-name}") String exchangeName,
+			@Value("${bookingstatusupdates.queue.confirmation}") String confirmationQueueName,
+			@Value("${bookingstatusupdates.queue.reservation}") String reservationQueueName,
+			@Value("${bookingstatusupdates.queue.rejection}") String rejectionQueueName,
+			@Value("${bookingstatusupdates.routingkey.confirmed}") String routingKeyConfirmed,
+			@Value("${bookingstatusupdates.routingkey.reserved}") String routingKeyReserved,
+			@Value("${bookingstatusupdates.routingkey.rejected}") String routingKeyRejected
+	) {
+		this.exchangeName = exchangeName;
+		this.confirmationQueueName = confirmationQueueName;
+		this.reservationQueueName = reservationQueueName;
+		this.rejectionQueueName = rejectionQueueName;
+		this.routingKeyConfirmed = routingKeyConfirmed;
+		this.routingKeyReserved = routingKeyReserved;
+		this.routingKeyRejected = routingKeyRejected;
+	}
+
+	@Bean
+	public Queue confirmationQueue() {
+		return new Queue(this.confirmationQueueName, true, false, false);
+	}
+
+	@Bean
+	public Queue reservationQueue() {
+		return new Queue(this.reservationQueueName, true, false, false);
+	}
+
+	@Bean
+	public Queue rejectionQueue() {
+		return new Queue(this.rejectionQueueName, true, false, false);
+	}
+
+	@Bean
+	public DirectExchange exchange() {
+		return new DirectExchange(this.exchangeName, true, false);
+	}
+
+	@Bean
+	public Binding bindingConfirmation(Queue confirmationQueue, DirectExchange exchange) {
+		return BindingBuilder.bind(confirmationQueue).to(exchange).with(this.routingKeyConfirmed);
+	}
+
+	@Bean
+	public Binding bindingReservation(Queue reservationQueue, DirectExchange exchange) {
+		return BindingBuilder.bind(reservationQueue).to(exchange).with(this.routingKeyReserved);
+	}
+
+	@Bean
+	public Binding bindingRejection(Queue rejectionQueue, DirectExchange exchange) {
+		return BindingBuilder.bind(rejectionQueue).to(exchange).with(this.routingKeyRejected);
+	}
+}
+```
+
+Die Namen der Exchange, der Queues und der Routing-Keys sind in der allgemeinen Konfigurationsdatei festgelegt, wie im folgenden Quellcodeauszug zu sehen ist.
+
+```properties
+bookingstatusupdates.exchange-name = bookingstatusupdatesexchange
+bookingstatusupdates.queue.confirmation = bookingstatusupdatesqueue.confirmed
+bookingstatusupdates.queue.reservation = bookingstatusupdatesqueue.reserved
+bookingstatusupdates.queue.rejection = bookingstatusupdatesqueue.rejected
+bookingstatusupdates.routingkey.confirmed = bookingstatusupdates.confirmed
+bookingstatusupdates.routingkey.reserved = bookingstatusupdates.reserved
+bookingstatusupdates.routingkey.rejected = bookingstatusupdates.rejected
+```
+
+Für das Profil zum Betrieb der Anwendung in Kubernetes muss der AMQP-Host noch entsprechend auf den Namen des Services geändert werden, wie im folgenden Auszug aus dem Kubernetes-Konfigurationsprofil zu sehen ist.
+
+```properties
+spring.rabbitmq.host=rabbitmq-service
+spring.rabbitmq.port=5672
+```
+
 ## Automatisierte Tests
 
-Lukas
+Die aus der fünften Übung bekannte automatisierte Test-Suite, welche Unit-Tests für die Komponente zur Berechnung der Dauer einer Reise, Tests für die MongoDB-Zugriffsschicht sowie Integrationstests für das Service umfasst wurde im Zuge des Projektes ebenfalls erweitert.
+So wird die Methode zum Laden einer Buchung ebenfalls getestet, ob korrekterweise eine Exception ausgelöst wird, wenn die E-Mail-Adresse des Benutzers nicht mit jener für die Buchung vermerkten E-Mail-Adresse übereinstimmt.
+Dieses Verhalten wird durch den folgenden Testfall `testBookingAuthorization` sichergestellt.
+
+```java
+@SpringBootTest
+@Import(CircuitBreakerTestConfig.class)
+class BookingServiceTest {
+	// ...
+
+	@Test
+	void testBookingAuthorization() {
+		assertDoesNotThrow(() -> {
+			final BookingDto booking = this.bookingService.book(0, 14, LocalDate.of(2020, 6, 13), TrainCarType.SLEEPER, IntegrationTestConstants.EMAIL_ADDRESS);
+			final BookingDto lookedUpBooking = this.bookingService.findById(booking.getId(), IntegrationTestConstants.EMAIL_ADDRESS);
+			assertEquals(booking.getEmailAddress(), lookedUpBooking.getEmailAddress());
+			assertThrows(UnauthorizedBookingAccess.class, () -> {
+				this.bookingService.findById(booking.getId(), "homer.simpson@burnspowerplant.com");
+			});
+		});
+	}
+
+	// ...
+}
+```
+
+Weiterhin wurden alle Testfälle aus der fünften Übung so angepasst, dass beim Erstellen einer Buchung die E-Mail-Adresse nun als Parameter mitgegeben wird.
+Hierfür wird für die Tests der funktionalen Anforderungen einfach eine Standard-E-Mail-Adresse verwendet.
+
+Der Zugriff auf die MongoDB wird weiterhin mittels einer eingebetteten In-Memory-Datenbank realisiert, was die Tests unabhängig von einer konkret laufenden MongoDB-Instanz macht.
+Ebenso wird der Zugriff auf den Timetable mit dem im Zuge der fünften Übung entwickelten Mechanismus zum Mocking der Responses durch vorgerfertigte JSON-Dokumente vorgetäuscht.
+Ebenso wird die Abhängigkeit an RabbitMQ mittels eines Mocks gelöst.
+Hierfür wird ein entsprechender [Mock-Provider](https://github.com/fridujo/rabbitmq-mock) als Abhängigkeit hinzugefügt:
+
+```xml
+<dependency>
+	<groupId>com.github.fridujo</groupId>
+	<artifactId>rabbitmq-mock</artifactId>
+	<version>1.1.0</version>
+	<scope>test</scope>
+</dependency>
+```
+
+Anschließend muss eine entsprechende Konfiguration für Testfälle erstellt werden, welche die RabbitMQ-Connection-Factory durch die Mock-Implementierung ersetzt.
+Die entsprechende Klasse ist im unteren Code-Listing angegeben.
+
+```java
+import com.github.fridujo.rabbitmq.mock.MockConnectionFactory;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+
+@TestConfiguration
+public class RabbitMqMockConfig {
+	@Bean
+	public ConnectionFactory connectionFactory() {
+		return new CachingConnectionFactory(new MockConnectionFactory());
+	}
+}
+```
+
+Abschließend muss die Konfiguration noch als zusätzliche Konfiguration für alle Testklassen, die Funktionen zum Zugriff auf RabbitMQ bieten, hinzugefügt werden.
+Dies ist exemplarisch im folgenden Snippet für die Klasse `BookingServiceTest` angegeben.
+
+```java
+@SpringBootTest
+@Import({CircuitBreakerTestConfig.class, RabbitMqMockConfig.class})
+class BookingServiceTest {
+	// ...
+}
+```
+
+Wie die folgende Abbildung zeigt, laufen alle Integrationstests erfolgreich durch.
+Daher kann davon ausgegangen werden, dass die im Zuge der fünften Übung implementierte Funktionalität weiterhin wie gewünscht zur Verfügung steht.
+
+![Die Integrationstests des Booking-Services werden erfolgreich ausgeführt](doc/booking/integrationTestResults.png)
+
+Ebenso werden die Tests des Data-Access-Layers erfolgreich durchgeführt, wie die untere Abbildung zeigt.
+
+![Die DAL-Tests des Booking-Services werden erfolgreich ausgeführt](doc/booking/dalTestResults.png)
+
+Besonderes Augenmerk gilt es auf die Tests zum Zugriff auf den Timetable-Service zu legen.
+Diese mocken den Timetable-Service nicht, sondern testen, ob der mit OpenFeign generierte REST-Client erfolgreich auf den Service zugreifen kann.
+Der Feign-Service verwendet nun zur Exception-Translation einen AOP-Mechanismus an Stelle des Wrappers.
+Da die Tests nicht verändert wurden, die unten zu sehende Abbildung aber zeigt, dass auch die automatisierten Tests, welche einen Test für die Exception-Translation umfassen, ohne Fehler durchlaufen, kann davon ausgegangen werden, dass die Exception-Translation funktioniert.
+
+![Die Test-Suite zum Zugriff auf den Timetable-Service com Booking-Servic wird erfolgreich ausgeführt](doc/booking/feignTestResults.png)
 
 # API-Gateway
 
@@ -304,9 +677,6 @@ Anschließend greift die erste Regel und mappt den Zugriff auf die benötigte Re
 Das selbe Prinzip wird ebenfalls für den Booking-Service angewandt.
 
 ```yaml
-server:
-  port: 8081
-
 spring:
   cloud:
     gateway:
@@ -332,11 +702,6 @@ spring:
         - Path=/v3/api-docs/**
         filters:
         - RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs/
-opentracing:
-  jaeger:
-    udp-sender:
-      host: localhost
-      port: 6831
 ``` 
 
 ## OpenAPI
@@ -548,7 +913,56 @@ public class WebCorsConfiguration {
 
 ## Tracing
 
+Für die Anbindung an den Jaeger-Tracing-Server wird eine [Third-Party-Bibliothek eingesetzt, welche ein Tracing für die Bibliotheken der Spring Cloud bereitstellt](https://github.com/opentracing-contrib/java-spring-jaeger).
 
+Dieser Ansatz wird verwendet, da [Spring Cloud Sleuth](https://spring.io/projects/spring-cloud-sleuth) lediglich eine Anbindung an Zipkin bietet, welches wiederum mit der OpenTracing-Implementierung von Quarkus Probleme bereitet.
+Daher wurde Jaeger als kleinster gemeinsamer Nenner identifiziert.
+
+Der erste Schritt ist es, die entsprechende Abhängigkeit in der Maven-Konfigurationsdatei `pom.xml` einzutragen, wie das folgende Listing zeigt.
+```xml
+<!-- ... -->
+	<dependencies>
+		<dependency>
+			<groupId>io.opentracing.contrib</groupId>
+			<artifactId>opentracing-spring-jaeger-cloud-starter</artifactId>
+			<version>3.1.2</version>
+		</dependency>
+	</dependencies>
+<!-- ... -->
+```
+
+Anschließend muss die Tracing-Implementierung noch konfiguriert und aktiviert werden, was in der Einstellungsdatei für das entsprechende Profil erfolgen kann.
+Hierfür sind die folgenden Properties entsprechend zu setzen:
+
+```yaml
+opentracing:
+  jaeger:
+    udp-sender:
+      host: localhost
+      port: 6831
+```
+
+In der Konfigurationsdatei für Kubernetes muss der Hostname `localhost` durch den Servicenamen entsprechend ersetzt werden.
+
+## Health-Checks
+
+Zur Implementierung der Endpunkte für die Kubernetes-Probes ist die standardmäßig von Spring Boot bereitgestellte Implementierung der Endpunkte ausreichend.
+Um die Health-Checks zu implementieren, ist lediglich die folgende Abhängigkeit in die Maven-Konfigurationsdatei `pom.xml` einzutragen:
+
+```xml
+<dependency>
+	<groupId>org.springframework.boot</groupId>
+	<artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+# Notification
+
+Lukas
+
+## Health-Checks
+
+Lukas
 
 # Kubernetes
 
@@ -610,9 +1024,23 @@ Daniel
 
 Daniel
 
+# Ergebnisse
+
+## Frontend
+
+Daniel
+
+## Notifications
+
+Lukas
+
 # Authentifizierung
 
 ## API-Gateway und Services
+
+Lukas
+
+## Tracing
 
 Lukas
 
