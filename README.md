@@ -37,7 +37,15 @@ Das Web-Frontend ist mit React und TypeScript realisiert und bietet eine graphis
 
 ## Ablauf der Kommunikation zur Buchung eines Tickets
 
-Lukas
+Das unten zu sehende Sequenzdiagramm zeigt den Ablauf zur Anzeige der Verbindungen sowie zur Buchung eines Tickets zwischen zwei Stationen.
+Dabei dient das Gateway als zentrales Element in der Kommunikation zwischen Benutzer und dem Timetable- sowie dem Booking-Service.
+
+Bei der Verarbeitung einer Buchungsanfrage lädt der Booking-Service zuerst die gesamte Route vom Timetable-Service und teilt diese in Einzelverbindungen nach Umstiegen auf.
+Da bei einem Response für Verbindungen aus Datensparsamkeitsgründen die Verbindungen nicht mitgeschickt werden, muss für jede Umstiegsverbindung diese Information noch einmal vom Timetable-Service angefordert.
+
+Basierend auf den Informationen über den Zug, der für den Hop eingesetzt wird und den bisherigen Buchungen für diesen Hop kann der Booking-Service bei genügend Platz entweder eine weitere Buchung generieren oder die Buchungsanfrage aufgrund von Überbuchung ablehnen.
+
+![Sequenzdiagramm zur Erstellung einer Buchung](doc/architecture/bookingSequence.svg)
 
 ## Domänenmodelle
 
