@@ -33,7 +33,9 @@ class App extends React.Component {
 		);
 		const bookingDisplay = ({match}: any) => (<BookingDisplay
 				bookingId={match.params.bookingId}
-				bookingApi={bookingApi}/>
+				bookingApi={bookingApi}
+				timetableApi={timetableApi}
+			/>
 		);
 
 		return (
