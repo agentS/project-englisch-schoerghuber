@@ -971,6 +971,7 @@ Mehrere Instanzen des Notification-Services verarbeiten dabei konkurrierend AMQP
 
 Für die Implementierung wird das Toolkit [Vert.x](https://www.vertx.io/) verwendet.
 Da Vert.x Unterstützung für mehrere JVM-basierte Programmiersprachen bietet, ist das Service mit Kotlin implementiert.
+Auf eine Implementierung mit [Dapr](https://www.dapr.io/) wurde verzichtet, da die Dokumentation zur Verarbeitung von Nachrichten, welche von externen AMQP-Producern generiert werden, leider noch nicht sehr umfangreich ist und das Toolkit Vert.x ebenfalls eine spannende Alternative darstellt.
 
 Im Hauptverticle werden drei Verticles gestartet:
 
@@ -1022,15 +1023,199 @@ class HealthCheckVerticle : AbstractVerticle() {
 
 # Kubernetes
 
-Lukas
+Die Services werden in Kubernetes betrieben, wobei Minikube als Kubernetes-Distribution zum Einsatz kommt.
+Die Services werden mit mehreren Replikas betrieben, um Lastverteilung und Ausfallssicherheit zu gewährleisten.
+Dabei werden zwei Instanzen des API-Gateways, jeweils drei Instanzen des Booking- und Timetable-Services sowie zwei Instanzen des Notification-Services betrieben.
+Die Infrastrukturkomponenten PostgreSQL, MongoDB, Jaeger und RabbitMQ werden dabei nur in einfacher Ausführung betrieben, da der Konfigurationsaufwand für einen Betrieb im Kubernetes-Cluster über das Ausmaß der verfügbaren Zeit hinausgeht.
+
+Für jeden Service wird ein Deployment sowie ein oder mehrere Services angelegt.
+Für das API-Gateway, den Booking-Service und den Timetable-Service werden zusätzlich mehrere Node-Port- bzw. Load-Balancing-Services angelegt, damit diese Services auch von außen erreichbar sind.
 
 ## Timetable
 
-Lukas
+Quarkus bietet bereits standardmäßig eine exzellente Integration in Kubernetes.
+Dabei bietet Quarkus die Möglichkeiten die benötigten Kubernetes-Ressourcen (Deskriptoren und Docker-Images) automatisch zu erzeugen, die Docker-Container automatisch zu erzeugen und auf die Registry hochzuladen sowie automatisch das Deployment durchzuführen.
+Hierfür bietet [die entsprechende Anleitung](https://quarkus.io/guides/deploying-to-kubernetes) einen sehr guten Einstiegspunkt.
+Darüber hinaus bietet Quarkus noch eine Integration in Minikube, was vollautomatische Deployments ermöglicht.
+
+Zu Beginn sind die Dependencies zur Kubernetes- sowie zur Minikube-Integration und zur Erstellung des Docker-Containers einzufügen:
+
+```xml
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-kubernetes</artifactId>
+</dependency>
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-container-image-jib</artifactId>
+</dependency>
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-minikube</artifactId>
+</dependency>
+```
+
+Da bereits zuvor die Abhängigkeit auf `io.quarkus:quarkus-smallrye-health` eingefügt wurde, werden sowohl Readiness- als auch Liveness-Probe automatisch in die generierte Konfiguration aufgenommen.
+
+Als Nächstes müssen noch einige Konfigurationseinstellungen in der Datei `application.properties` vorgenommen werden, sodass die Anwendung nahtlos in das von uns verwendete Kubernetes-Schema passt.
+Die unten zu sehende Konfiguration zeigt, dass die Anzahl der Replikate auf 3 gesetzt wird, dass für das generierte Service ein Load-Balancer-Service erzeugt wird und dass die Image-Gruppe auf `timetable` gesetzt wird.
+Ebenso wird das Label `app` auf `timetable` gesetzt.
+
+```properties
+quarkus.kubernetes.replicas=3
+quarkus.kubernetes.service-type=load-balancer
+quarkus.container-image.group=timetable
+quarkus.kubernetes.labels.app=timetable
+```
+
+Anschließend kann das Deployment bereits angestoßen werden.
+Hierzu ist zuerst mit dem unten zu sehenden Befehl die Docker-Registry auf jene des Minikube-Clusters zu setzen.
+Dies ist notwendig, damit der Container auf die Minikube-Registry gepusht wird.
+
+```bash
+eval $(minikube -p minikube docker-env)
+```
+
+Anschließend kann das Bauen der Applikation, des Docker-Containers, das Generieren der Kubernetes-Deskriptoren und das Deployen der Anwendung einfach mit dem folgenden Maven-Goal vom Ordner des Timetable-Codes ausgeführt werden:
+
+```bash
+mvn package -Dmaven.test.skip=true -Dquarkus.kubernetes.deploy=true
+```
+Interessant sind bei der Ausgabe noch die folgenden Zeilen, die anzeigen, dass die Anwendung mittels der generierten Deskriptordatei für Minikube ausgerollt wird und dass der Service-Account, das Service und das Deployment an den API-Server gesendet wurden.
+
+```bash
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Deploying target 'minikube' since it has the highest priority among the implicitly enabled deployment targets
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Deploying to minikube server: https://192.168.99.100:8443/ in namespace: default.
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: ServiceAccount timetable.
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: Service timetable.
+[INFO] [io.quarkus.kubernetes.deployment.KubernetesDeployer] Applied: Deployment timetable.
+[INFO] [io.quarkus.deployment.QuarkusAugmentor] Quarkus augmentation completed in 15394ms
+```
+
+Abschließend kann noch die generierte YAML-Datei mit den Deployment-Deskriptoren, welche sich unter `target/kubernetes/minikube.yml` befindet inspiziert werden.
+Der Inhalt der Datei ist im folgenden Listing zu sehen.
+Interessant ist dabei, dass ein Node-Port-Service erzeugt wird.
+Dies resultiert aufgrund der Tatsache, dass ein Minikube-Cluster nur aus einem Worker-Knoten besteht und ein Load-Balancing über die Knoten ohnehin keinen Sinn macht.
+Innerhalb des Nodes führt ein Service regulär ein Node-Balancing über die Pods durch.
+Ebenso kann man im Deployment-Deskriptor gut erkennen, dass 3 Replikas erzeugt werden und dass sowohl eine Liveness- als auch eine Readiness-Probe durchgeführt werden.
+Darüber hinaus ist zu sehen, dass die Version für das Deployment direkt aus der Maven-Konfigurationsdatei `pom.xml` übernommen wird.
+
+```yaml
+---
+apiVersion: "v1"
+kind: "ServiceAccount"
+metadata:
+  annotations:
+    app.quarkus.io/vcs-url: "https://github.com/sve2-2020ss/project-englisch-schoerghuber.git"
+    app.quarkus.io/build-timestamp: "2020-06-20 - 16:10:25 +0000"
+    app.quarkus.io/commit-id: "5cbaec22a7fe0582f57eadec98ff0cc5e899e3aa"
+  labels:
+    app.kubernetes.io/name: "timetable"
+    app.kubernetes.io/version: "0"
+  name: "timetable"
+---
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  annotations:
+    app.quarkus.io/vcs-url: "https://github.com/sve2-2020ss/project-englisch-schoerghuber.git"
+    app.quarkus.io/build-timestamp: "2020-06-20 - 16:10:25 +0000"
+    app.quarkus.io/commit-id: "5cbaec22a7fe0582f57eadec98ff0cc5e899e3aa"
+  labels:
+    app.kubernetes.io/name: "timetable"
+    app.kubernetes.io/version: "0"
+  name: "timetable"
+spec:
+  ports:
+  - name: "http"
+    nodePort: 31674
+    port: 8082
+    targetPort: 8082
+  selector:
+    app.kubernetes.io/name: "timetable"
+    app.kubernetes.io/version: "0"
+  type: "NodePort"
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  annotations:
+    app.quarkus.io/vcs-url: "https://github.com/sve2-2020ss/project-englisch-schoerghuber.git"
+    app.quarkus.io/build-timestamp: "2020-06-20 - 16:10:25 +0000"
+    app.quarkus.io/commit-id: "5cbaec22a7fe0582f57eadec98ff0cc5e899e3aa"
+  labels:
+    app.kubernetes.io/name: "timetable"
+    app.kubernetes.io/version: "0"
+  name: "timetable"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: "timetable"
+      app.kubernetes.io/version: "0"
+  template:
+    metadata:
+      annotations:
+        app.quarkus.io/vcs-url: "https://github.com/sve2-2020ss/project-englisch-schoerghuber.git"
+        app.quarkus.io/build-timestamp: "2020-06-20 - 16:10:25 +0000"
+        app.quarkus.io/commit-id: "5cbaec22a7fe0582f57eadec98ff0cc5e899e3aa"
+      labels:
+        app.kubernetes.io/name: "timetable"
+        app.kubernetes.io/version: "0"
+    spec:
+      containers:
+      - env:
+        - name: "KUBERNETES_NAMESPACE"
+          valueFrom:
+            fieldRef:
+              fieldPath: "metadata.namespace"
+        image: "timetable/timetable:0"
+        imagePullPolicy: "IfNotPresent"
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: "/health/live"
+            port: 8082
+            scheme: "HTTP"
+          initialDelaySeconds: 0
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+        name: "timetable"
+        ports:
+        - containerPort: 8082
+          name: "http"
+          protocol: "TCP"
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: "/health/ready"
+            port: 8082
+            scheme: "HTTP"
+          initialDelaySeconds: 0
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 10
+      serviceAccount: "timetable"
+
+```
 
 ### Konfiguration
 
-Lukas
+Zur Betrieb der Timetable-Container müssen einige Konfigurationseinstellungen angepasst werden.
+So muss z.B. für den PostgreSQL-Server und den Jaeger-Server die Service-DNS-Namen angegeben werden, um einen Zugriff auf die Services innerhalb des Clusters zu ermöglichen.
+Ebenfalls muss eingestellt werden, dass das Datenbankschema erstellt wird, falls es noch nicht existiert und dass die Initialdaten beim Starten importiert werden.
+Dies wird duch die unten zu sehenden Konfigurationsproperties erreicht.
+
+```properties
+quarkus.datasource.jdbc.url=jdbc:tracing:postgresql://postgresql-service:5432/timetable
+quarkus.hibernate-orm.database.generation = create
+%dev.quarkus.hibernate-orm.database.generation = drop-and-create
+%test.quarkus.hibernate-orm.database.generation = drop-and-create
+%prod.quarkus.hibernate-orm.sql-load-script=import.sql
+
+quarkus.jaeger.endpoint = http://jaeger-service-quarkus:14268/api/traces
+```
 
 ## Booking
 
