@@ -1,7 +1,7 @@
 # Anmerkungen
 
 Diese Dokumentation beschreibt hauptsächlich die im Rahmen des Projektes neu eingefügten Änderungen.
-
+Die Änderungen zur zweiten und fünften Hausübung, welche Vorarbeiten für das Projekt beinhalten sind explizit angeführt.
 
 # Funktionale Anforderungen
 
@@ -73,13 +73,157 @@ Dabei bezieht sich der Startbahnhof auf den Start und der Zielbahnhof auf das Zi
 Die Klasse `Ticket` dient zur Abbildung von Tickets, also einen Hop auf der Strecke von Start- nach Zielbahnhof der Buchung, welche eine ID des Startbahnhofs, eine ID des Zielbahnhofs, die ID des Wagens für welchen die Reservierung gilt, die Platznummer innerhalb des Wagens, die ID der Zugverbindung und das Abfahrdatum der Zugverbindung verfügt.
 Zusätzlich werden in der Menge mit dem Namen `departureStationIds` die IDs aller Abfahrtsbahnhöfe gespeichert, was die Überprüfung, ob der Zug auf einer Teilstrecke bereits voll ist, wesentlich erleichtert.
 
+Das Domänenmodell wurde in der fünften Übung durch die Neuimplementierung des Booking-Services erleichtert und von der fünften Übung auf das Projekt wurde zusätzlich die E-Mail-Adresse, welche aus dem OAuth-Token extrahiert wird, in das Domänemodell aufgenommen.
+
 ![Klassendiagramm des Domänenmodells des Booking-Services](doc/booking/domainModellClassDiagram.svg)
 
 # Timetable-Service
 
-Lukas
+Das Timetable-Service ist für das Abfragen von Bahnhöfen, Details zu Zügen, Verbindungen zwischen Bahnhöfen verantwortlich.
+Die Implementierung entspricht immer noch weitgehend jener aus der zweiten Übung, wurde aber für den Einsatz in Kubernetes angepasst.
+
+## Health-Checks
+
+Die hauptsächlich notwendige Anpassung ist das Hinzufügen von Health-Checks, sodass Kubernetes eine Health- und Readiness-Probe durchführen kann.
+Hierzu ist zu Beginn das entsprechende Dependency einzufügen:
+
+```xml
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-smallrye-health</artifactId>
+</dependency>
+```
+
+Laut [Quarkus-Guide](https://quarkus.io/guides/microprofile-health) werden standardmäßig die Routen für die Readiness- und Liveness-Probe von Kubernetes implementiert.
+Für die Readiness-Probe wird darüber hinaus bei der Verwendung eines JDBC-Datenbanktreibers ein Standardtest implementiert, welcher überprüft, ob die Verbindung zur Datenbank hergestellt werden kann.
+Da dies für den Timetable-Service ausreichend ist, muss keine zusätzliche Readiness-Probe implementiert werden.
+
+Jedoch wird standardmäßig keine Liveness-Probe implementiert.
+Hierzu empfiehlt es sich eine benuzterdefinierte Livness-Probe bereitzustellen, welche z.B. überprüft, ob eine Verbindung zwischen zwei Bahnhöfen gefunden werden kann.
+Der Code für diese ist im folgenden Listing aufgeführt.
+Durch Angabe der Annotationen `@ApplicationScoped` und `@Liveness` wird der Check automatisch im Health-Framework registriert.
+
+```java
+@ApplicationScoped
+@Liveness
+public class ConnectionLookupHealthCheck implements HealthCheck {
+	private static final long RAILWAY_STATION_ID_VIENNA_CENTRAL_STATION = 0L;
+	private static final long RAILWAY_STATION_ID_ZURICH_CENTRAL_STATION = 14L;
+
+	private static final String HEALTH_CHECK_NAME = "Connection lookup health check";
+
+	private final RouteManager routeManager;
+
+	@Inject
+	public ConnectionLookupHealthCheck(RouteManager routeManager) {
+		this.routeManager = routeManager;
+	}
+
+	@Override
+	public HealthCheckResponse call() {
+		try {
+			List<RailwayStationConnectionDto> connections = this.routeManager.findAllStopsBetween(
+					RAILWAY_STATION_ID_VIENNA_CENTRAL_STATION,
+					RAILWAY_STATION_ID_ZURICH_CENTRAL_STATION
+			);
+			if (connections.size() > 0) {
+				return HealthCheckResponse.up(HEALTH_CHECK_NAME);
+			}
+		} catch (NoRouteException exception) {
+			exception.printStackTrace();
+		}
+		return HealthCheckResponse.down(HEALTH_CHECK_NAME);
+	}
+}
+```
+
+### Tests
+
+Nun kann z.B. mittels `curl` überprüft werden, ob das Service verfügbar ist, indem der Endpunkt `/health` abgefragt wird.
+Wie in der unteren Ausgabe ersichtlich ist, setzt sich das Ergebnis des Gesundheitszustands der Anwendung aus den Ergebnissen der Checks zusammen.
+Da sowohl der Check für die Liveness-Probe als auch für die Health-Probe den Zustand als gesund befunden haben, wird der Gesamtzustand ebenfalls als gesund befunden.
+
+```bash
+$ curl -X GET -i http://localhost:8082/health/
+
+HTTP/1.1 200 OK
+content-type: application/json; charset=UTF-8
+content-length: 252
+
+
+{
+    "status": "UP",
+    "checks": [
+        {
+            "name": "Connection lookup health check",
+            "status": "UP"
+        },
+        {
+            "name": "Database connections health check",
+            "status": "UP"
+        }
+    ]
+}
+```
+
+Die folgende Ausgabe zeigt noch das Ergebnis der Abfrage der Pfade für den Livness- und Health-Check an.
+Diese werden auch für die Konfiguration in Kubernetes verwendet.
+
+```bash
+$ curl -X GET -i http://localhost:8082/health/live
+HTTP/1.1 200 OK
+content-type: application/json; charset=UTF-8
+content-length: 147
+
+
+{
+    "status": "UP",
+    "checks": [
+        {
+            "name": "Connection lookup health check",
+            "status": "UP"
+        }
+    ]
+}
+
+$ curl -X GET -i http://localhost:8082/heath/ready
+HTTP/1.1 200 OK
+content-type: application/json; charset=UTF-8
+content-length: 150
+
+
+{
+    "status": "UP",
+    "checks": [
+        {
+            "name": "Database connections health check",
+            "status": "UP"
+        }
+    ]
+}
+```
+
+## Automatisierte Tests
+
+Im Rahmen der zweiten Übung wurde eine Integrations-Test-Suite erstellt, welche überprüft, ob der Timetable-Service die Standardgeschäftsfälle erfolgreich behandelt.
+Da die Version des Quarkus-Framework, mit welchem der Timetable-Service implementiert ist, bereits zweimal um eine Major-Release erhöht wurde, konnte mit der Test-Suite sichergestellt werden, dass es dadurch zu keinem Verlust der Funktionalität kam.
+In der unteren Abbildung ist zu sehen, dass die Testfälle des timetable-Services erfolgreich ausgeführt werden.
+
+![Ergebnisse der Test-Suite des Timetable-Services](doc/timetable/integrationTestResults.png)
 
 # Booking-Service
+
+Lukas
+
+## Health-Checks
+
+Lukas
+
+## Publishen von Buchungsstatusupdates mit AMQP
+
+Lukas
+
+## Authentifizierung
 
 Lukas
 
@@ -111,6 +255,7 @@ Dieses Interface kann mittels Dependency-Injection nun verwendet werden und Open
 
 Da es vorkommen kann, dass die Methode `getRailwayConnections(originId, destinationId)` den HTTP-Fehlercode 404 zurückliefert, muss dieser zur sauberen Übersetzung in eine businesslogikspezifische Excpetion `NoConnectionsAvailableException` noch angepasst werden.
 Um dies zu realisieren, wird Springs AOP-Mechanismus verwendet und die Exceptions mit einem After-Throwing-Advice entsprechend übersetzt.
+Die Behandlung mittels AOP wurde im Vergleich zur fünften Hausübung eingeführt und ersetzt die Wrapper-Klasse.
 
 ```java
 @Aspect
@@ -123,95 +268,9 @@ public class TimeTableRestClientFeignAdvice {
 }
 ```
 
-## Circuit-Breaker
+## Automatisierte Tests
 
-Um Ausfälle des Timetable-Services zu erkennen und im Falle eines Ausfalls Timeouts und damit kaskadierende Fehler zu verhindern, werden Zugriffe auf den Timetable-Rest-Service über das Circuit-Breaker-Pattern realisiert.
-
-### Verfügbare Implementierungen
-
-Für Spring Boot gibt es viele verschiedene Implementierungen des Circuit-Breaker-Patterns.
-Die [ursprüngliche Implementierung Spring Cloud Netflix Hystrix](https://spring.io/guides/gs/circuit-breaker/) wird mittlerweile nicht mehr aktiv weiterentwickelt, hat aber die breiteste Unterstützung inklusive [einer sehr guten Integration in Spring Cloud OpenFeign](https://spring.io/guides/gs/circuit-breaker/).
-
-Als moderne Alternative gibt es [Spring Cloud CircuitBreaker](https://spring.io/projects/spring-cloud-circuitbreaker), welches über verschiedene Circuit-Breaker-Implementierungen abstrahiert und somit ein einheitliches API mit austauschbaren Implementierungen bietet.
-Allerdings ist dieses Projekt erst im April 2019 der Öffentlichkeit vorgestellt worden und daher gibt es noch wenig Dokumentation und nicht allzu viele Integrationen.
-So [fehlt z.B. die Integration in Spring Cloud OpenFeign](https://github.com/spring-cloud/spring-cloud-circuitbreaker/issues/3).
-
-Zusätzlich gibt es noch das [Spring-Boot-Starter, welches direkt von Resilience4J bereitgestellt wird](https://resilience4j.readme.io/docs/getting-started-3).
-Dieses bietet über Add-Ons Integration in OpenFeign.
-
-Wir haben uns für unsere Implementierung für Spring Cloud CircuitBreaker entschieden, da dieses direkt vom Spring-Team gewartet wird und eine Integration für das moderne Resilience4J bietet.
-
-Die von uns gewünschte Funktionalität zur Benachrichtigung, sobald der Circuit-Breaker wieder in den geschlossenen Zustand geht, bietet leider kein aktuelles Framework in ausreichendem Maße an.
-
-### Spring Cloud CircuitBreaker
-
-Wie gesagt stehen für Spring Clud CircuitBreaker noch nicht viele Code-Beispiele zur Verfügung.
-Die Implementierung auf unserer Seite orientiert sich an der [Beispielimplementierung des Spring-Cloud-Teams](https://github.com/spring-cloud-samples/spring-cloud-circuitbreaker-demo/blob/master/spring-cloud-circuitbreaker-demo-resilience4j/src/main/java/org/springframework/cloud/circuitbreaker/demo/resilience4jcircuitbreakerdemo/DemoController.java).
-
-Hierbei ergibt sich die folgende Hierarchie, wie sie auch das folgende Klassendiagramm zeigt:
-Das Interface `TimeTableService` spezifiziert die Schnittstelle für den Zugriff auf den Timetable-Service.
-Den Fall, dass das Timetable-Service ein entferntes Service ist, implementiert die Klasse `TimeTableServiceRest`.
-Dieses wrappt die Zugriffe auf das entfernte Service in Circuit-Breaker-Aufrufe.
-Der Zugriff auf das entfernte Service erfolgt mit dem Spring Cloud OpenFeign-REST-Client, welcher aus die Schnittstelle `TimeTableRestClientFeign` generiert wird.
-
-![Klassenhierarchie bei Verwendung des Circuit-Breakers](doc/circuitBreaker/timeTableServiceHierarchy.svg)
-
-Diese Hierarchie bietet den Vorteil, dass der Zugriff den entfernten Service mittels des Circuit-Breakers in den Integrationstests behandelt werden kann, da einfach die Komponente `TimeTableRestClientFeign` durch eine Mock-Implementierung ausgetauscht werden kann.
-
-Die Komponente `TimeTableServiceRest` wrappt die Aufrufe der Methoden der Instanz des generierten Feign-Clients, wie das folgende Listing zeigt.
-Die Circuit-Breaker-Instanzen werden dabei mittels der via DI zur Verfügung gestellten Instanz der Klasse `CircuitBreakerFactory` erzeugt.
-In den Wrappern wird dabei die Fallback-Methode so implementiert, dass eine entsprechende Ausnahme vom Typ `TimeTableServiceNotAvailableException` ausgelöst wird.
-
-Zusätzlich muss in der Methode `getRailwayConnections` überprüft werden, ob die Exception des Circuit-Breakers durch das Nichtvorhandensein einer Route vom Abfahrtsbahnhof zum Zielbahnhof ausgelöst wurde und diese Exception muss entsprechend weitergegeben werden.
-
-Uns ist bewusst, dass die aspektorientierte Programmierung bessere Möglichkeiten, die weniger Code zur Lösung des Problemes erfordert hätten, bietet.
-Allerdings ist es uns aufgrund des aktuellen Zeitmangels durch die vielen Hausübungen und anstehenden Tests und dem anderen Fokus der Übung nicht möglich gewesen, dies wie gewünscht zu realisieren.
-
-```java
-@Service
-public class TimeTableServiceRest implements TimeTableService {
-	private final TimeTableRestClientFeignWrapper timeTableRestClient;
-	private final CircuitBreakerFactory circuitBreakerFactory;
-
-	public TimeTableServiceRest(
-			@Autowired TimeTableRestClientFeignWrapper timeTableRestClient,
-			@Autowired CircuitBreakerFactory circuitBreakerFactory
-	) {
-		this.timeTableRestClient = timeTableRestClient;
-		this.circuitBreakerFactory = circuitBreakerFactory;
-	}
-
-	@Override
-	public List<RailwayStationConnectionDto> getRailwayConnections(Long originId, Long destinationId) {
-		try {
-			return this.circuitBreakerFactory.create("getRailwayConnections").run(
-					() -> this.timeTableRestClient.getRailwayConnections(originId, destinationId)
-			);
-		} catch (NoFallbackAvailableException exception) {
-			if (exception.getCause() instanceof NoConnectionsAvailableException) {
-				throw ((NoConnectionsAvailableException) exception.getCause());
-			}
-			throw new TimeTableServiceNotAvailableException(exception);
-		}
-	}
-
-	@Override
-	public List<TrainCarDto> getTrainCarsForConnectionId(Long id) {
-		return this.circuitBreakerFactory.create("getTrainCarsForConnectionId").run(
-				() -> this.timeTableRestClient.getTrainCarsForConnectionId(id),
-				(exception) -> { throw new TimeTableServiceNotAvailableException(exception); }
-		);
-	}
-
-	@Override
-	public List<TrainCarDto> getTrainCarsForConnectionCode(String code) {
-		return this.circuitBreakerFactory.create("getTrainCarsForConnectionCode").run(
-				() -> this.timeTableRestClient.getTrainCarsForConnectionCode(code),
-				(exception) -> { throw new TimeTableServiceNotAvailableException(exception); }
-		);
-	}
-}
-```
+Lukas
 
 # API-Gateway
 
@@ -487,13 +546,65 @@ public class WebCorsConfiguration {
 }
 ```
 
+## Tracing
+
+
+
 # Kubernetes
+
+Lukas
+
+## Timetable
+
+Lukas
+
+### Konfiguration
+
+Lukas
+
+## Booking
+
+Lukas
+
+### Konfiguration
+
+Lukas
+
+## Gateway
+
+Lukas
+
+### Konfiguration
+
+Lukas
+
+## Notification
+
+Lukas
+
+### Konfiguration
 
 Lukas
 
 ## Infrastruktur-Services
 
-Lukas
+Daniel
+
+### PostgreSQL
+
+Daniel
+
+### MongoDB
+
+Daniel
+
+### RabbitMQ
+
+Daniel
+
+### Jaeger
+
+Daniel
 
 # Frontend
 
