@@ -2127,7 +2127,8 @@ jaeger-75b465cfcc-s66mq       1/1     Running   0          85s
 Damit das Frontend auch im Kubenetes-Cluster deployt werden kann,
 werden die vom Build-Vorgang der React-App resultierenden Dateien
 in einen einfachen Apache-Webserver gepackt. Die `httpd.conf` ist hierbei
-so angepasst, dass nur die notwendigsten Module geladen werden.
+so angepasst, dass nur die notwendigsten Module geladen werden und dass durch
+URL-rewriting die React-Anwendung unter jedem unbekannten Pfad erreichbar ist.
 
 Zum Erstellen des Docker-Abbildes und speichern in der Minikube-Registry wurde
 ein Skript erstellt:
