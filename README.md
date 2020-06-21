@@ -1918,11 +1918,209 @@ mongodb-66b897c589-rrlwj      1/1     Running   0          3m46s
 
 ### RabbitMQ
 
-Daniel
+Zum Entgegennehmen von Notification-Nachrichten vom Booking-Service, die danach vom Notification-Service
+bearbeitet werden, wird die Implementierung `RabbitMQ`, die unter anderem AMQP unterstützt, auf
+dem Kubernetes-Cluster depployt. Da diese Komponente in diesem Fall keine Persistierung benötigt,
+reichen ein Deployment- und ein Service-Deskriptor. 
+Der Deployment-Deskriptor definiert einen Container des Abbildes `rabbitmq:3.8-management-alpine`,
+der ohne spezielle Konfiguration laufen kann.
+
+**rabbitmq-deployment.yaml**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    role: messaging
+    protocol: amqp
+    protocolversion: 0-9-7
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      name: rabbitmq-pod
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3.8-management-alpine
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+```
+
+Für die Service-Definition wird er Port `5672` freigegeben.
+**rabbitmq-service.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-service
+spec:
+  ports:
+    - port: 5672
+      targetPort: 5672
+  selector:
+    app: rabbitmq
+```
+
+Da dieses Service ebenso ein Webinterface zur Verfügung stellt, wird für Debugging-Zwecken
+ein NodePortService erstellt, das auf den Pod mit dem Port `15672` zugreift.
+**rabbitmq-ui-node-port-service.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq-ui-node-port-service
+spec:
+  type: NodePort
+  ports:
+    - port: 15672
+      targetPort: 15672
+  selector:
+    app: rabbitmq
+```
+
+Durch Einspielen der einzelnen Deskriptoren wird das beschriebene
+Service mit allen benötigten Komponenten im Cluster erstellt.
+```sh
+kubectl create -f rabbitmq-deployment.yaml
+kubectl create -f rabbitmq-service.yaml
+kubectl create -f rabbitmq-ui-node-port-service.yaml
+```
+
+Und mittels `kubectl get` kann überprüft werden, dass alle Komponenten erfolgreich erstellt wurden,
+wobei hier nur der fehlerfrei laufende Pod gezeigt wird:
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+rabbitmq-66c799dcc8-mjl4c     1/1     Running   0          2m2s
+```
 
 ### Jaeger
 
-Daniel
+Für den Tracing-Aspekt dieses Projekts wird `Jaeger` eingesetzt.
+Um ein möglichst einfaches Deployment zu haben, wird mittels des Deployment-Deskriptors
+ein Abbild von `aegertracing/all-in-one:1.18` verwendet.
+
+**jaeger-deployment.yaml**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jaeger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jaeger
+  template:
+    metadata:
+      name: jaeger-pod
+      labels:
+        app: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.18
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 16686
+            - containerPort: 6831
+              protocol: UDP
+            - containerPort: 14268
+          envFrom:
+            - configMapRef:
+                name: jaeger-config
+```
+
+Die verwendete ConfigMap für die Umgebungsvariablen des Containers bestehen nur
+aus einer Information für den `COLLECTOR_ZIPKIN_HTTP_PORT`:
+
+**jaeger-configuration.yaml**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jaeger-config
+  labels:
+    app: jaeger
+data:
+  COLLECTOR_ZIPKIN_HTTP_PORT: "9411"
+```
+
+Da die verwendeten Abhängigkeiten der Spring-Projekte und des Quarkus-Projekts
+auf verschiedene weisen auf das Jaeger-Service zugreifen, wurden zwei Service-Definitionen
+mit leicht unterschiedlicher Port-Konfiguration erstellt:
+
+**jaeger-service-spring.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-service-spring
+spec:
+  ports:
+  - port: 6831
+    targetPort: 6831
+    protocol: UDP
+  selector:
+    app: jaeger
+```
+
+**jaeger-service-quarkus.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-service-quarkus
+spec:
+  ports:
+  - port: 14268
+    targetPort: 14268
+  selector:
+    app: jaeger
+```
+
+Da es wieder ein Webinterface für dieses Service gibt, wird ein Service erstellt,
+über den dieses erreichbar gemacht wird. Dieses kann mittels `minikube service jaeger-ui-service --url`
+erreicht werden.
+
+**jaeger-ui-service.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger-ui-service
+spec:
+  type: NodePort
+  ports:
+    - port: 16686
+      targetPort: 16686
+  selector:
+    app: jaeger
+```
+
+Durch Einspielen der einzelnen Deskriptoren wird das beschriebene
+Service mit allen benötigten Komponenten im Cluster erstellt.
+```sh
+kubectl create -f jaeger-configuration.yaml
+kubectl create -f jaeger-deployment.yaml
+kubectl create -f jaeger-service-spring.yaml
+kubectl create -f jaeger-ui-service.yaml
+```
+
+Und mittels `kubectl get` kann überprüft werden, dass alle Komponenten erfolgreich erstellt wurden,
+wobei hier nur der fehlerfrei laufende Pod gezeigt wird:
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+jaeger-75b465cfcc-s66mq       1/1     Running   0          85s
+```
 
 ### Apache für SPA
 
