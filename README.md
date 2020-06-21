@@ -2303,13 +2303,13 @@ Status der Reservierung auf `RESERVED` gesetzt. Dies kann erreicht werden, indem
 Timetable-Service über den Befehl `kubectl delete svc timetable` in Kubernetes
 deaktiviert wird bevor die Buchung abgesetzt wird.
 
-IMAGE_OF_RESERVED_BOOKING
+![Frontend-Book-Ticket-Reserved](doc/frontend/booking_reserved.jpg)
 
 Wie im obigen Foto zu sehen ist, ist der Status `RESERVED`. Wird nun der Timetable-Service
 hochgefahren mit `kubectl apply -f timetable/target/kubernetes/minikube.json` und ein paar Sekunden gewartet
 sieht man, nach dem Aktualisieren der Seite, dass sich der Status in `CONFIRMED` geändert hat.
 
-IMAGE_OF_CONFIRMED_BOOKING
+![Frontend-Book-Ticket-Confirmed](doc/frontend/booking_confirmed.jpg)
 
 Wird ein ungültiger URL eingeben wird eine entsprechende Fehlermeldung angezeigt:
 ![Frontend-Book-Ticket-Not-Found](doc/frontend/booking_not_found.png)
@@ -2334,7 +2334,119 @@ Im unteren Screenshot einer E-Mail ist die Bestätigungs-E-Mail für die Buchung
 
 ## Rolling-Update
 
-Daniel
+Alle Deployments der Services Booking, Timetable, Gateway und Notification haben
+als Update-Methode das `RollingUpdate` gewählt, um die Pods laufend zu aktualisieren, ohne
+dass zu einem Zeitpunkt keine Pods für das Deployment erreichbar sind.
+
+Um eine neue Version eines Pods zu deployen muss ein neues Docker-Abbild des Services
+erstellt werden und dieses mit einem neuen Label, in diesem Fall `:1`, getaggt werden.
+Um das Rolling-Update nun durchzuführen, wird in unserem Fall der Deployment-Deskriptor
+kopiert und lediglich der Tag des Abbildes geändert. Wird dieses Deployment nun mit
+`kubectl apply -f booking-deployment-v1.yaml` angewendet, wird das Rolling-Update durchgeführt.
+
+Als Beispiel wird der Booking-Service `Verison 0` mit drei Replicas und der Rolling-Update-Option deployt:
+```yaml
+Name:                   booking
+Namespace:              default
+CreationTimestamp:      Sun, 21 Jun 2020 15:57:18 +0200
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=booking
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=booking
+  Containers:
+   booking:
+    Image:        booking:0
+    Port:         8084/TCP
+    Host Port:    0/TCP
+    Liveness:     http-get http://:8084/actuator/health/liveness delay=0s timeout=3s period=60s #success=1 #failure=3
+    Readiness:    http-get http://:8084/actuator/health/readiness delay=0s timeout=3s period=10s #success=1 #failure=3
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   booking-8b787dfd8 (3/3 replicas created)
+Events:
+  Type    Reason             Age    From                   Message
+  ----    ------             ----   ----                   -------
+  Normal  ScalingReplicaSet  3m30s  deployment-controller  Scaled up replica set booking-8b787dfd8 to 3
+```
+
+Wie man sieht wurden drei Instanzen erstellt, die alle das Abbild `booking:0` verwenden.
+Wird nun eine neue Version des Booking-Services gebaut und diese mit dem Docker-Tag `:1`
+versehen und zur Minikube-Docker-Registry gepusht, kann der bereits angesprochene Deskriptor
+`booking-deployment-v1.yaml` angewendet werden.
+
+Mit dem Befehl `kubectl rollout status deployments/booking` kann das Rolling-Update
+beobachtet werden:
+```yaml
+Waiting for deployment "booking" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "booking" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "booking" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "booking" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "booking" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "booking" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "booking" rollout to finish: 1 old replicas are pending termination...
+deployment "booking" successfully rolled out
+```
+
+Wird nun das Booking-Deployment erneut inspiziert, sieht man, dass das Abbild nun `booking:1` ist und
+alle Pods aktiv sind.
+
+```yaml
+Name:                   booking
+Namespace:              default
+CreationTimestamp:      Sun, 21 Jun 2020 15:57:18 +0200
+Labels:                 <none>
+Annotations:            deployment.kubernetes.io/revision: 2
+                        kubectl.kubernetes.io/last-applied-configuration:
+                          {"apiVersion":"apps/v1","kind":"Deployment","metadata":{"annotations":{},"name":"booking","namespace":"default"},"spec":{"replicas":3,"sel...
+Selector:               app=booking
+Replicas:               3 desired | 3 updated | 3 total | 3 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=booking
+  Containers:
+   booking:
+    Image:        booking:1
+    Port:         8084/TCP
+    Host Port:    0/TCP
+    Liveness:     http-get http://:8084/actuator/health/liveness delay=0s timeout=3s period=60s #success=1 #failure=3
+    Readiness:    http-get http://:8084/actuator/health/readiness delay=0s timeout=3s period=10s #success=1 #failure=3
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   booking-6bdf4f96b9 (3/3 replicas created)
+Events:
+  Type    Reason             Age    From                   Message
+  ----    ------             ----   ----                   -------
+  Normal  ScalingReplicaSet  15m    deployment-controller  Scaled up replica set booking-8b787dfd8 to 3
+  Normal  ScalingReplicaSet  2m54s  deployment-controller  Scaled up replica set booking-6bdf4f96b9 to 1
+  Normal  ScalingReplicaSet  2m32s  deployment-controller  Scaled down replica set booking-8b787dfd8 to 2
+  Normal  ScalingReplicaSet  2m32s  deployment-controller  Scaled up replica set booking-6bdf4f96b9 to 2
+  Normal  ScalingReplicaSet  2m1s   deployment-controller  Scaled down replica set booking-8b787dfd8 to 1
+  Normal  ScalingReplicaSet  2m1s   deployment-controller  Scaled up replica set booking-6bdf4f96b9 to 3
+  Normal  ScalingReplicaSet  89s    deployment-controller  Scaled down replica set booking-8b787dfd8 to 0
+```
+
+Dieser Weg ist für alle anderen Deployments (Timetable, Notification und Gateway) derselbe.
 
 ## Tracing
 
