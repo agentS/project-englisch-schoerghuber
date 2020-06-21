@@ -2124,19 +2124,86 @@ jaeger-75b465cfcc-s66mq       1/1     Running   0          85s
 
 ### Apache für SPA
 
-Daniel
+Damit das Frontend auch im Kubenetes-Cluster deployt werden kann,
+werden die vom Build-Vorgang der React-App resultierenden Dateien
+in einen einfachen Apache-Webserver gepackt. Die `httpd.conf` ist hierbei
+so angepasst, dass nur die notwendigsten Module geladen werden.
+
+Zum Erstellen des Docker-Abbildes und speichern in der Minikube-Registry wurde
+ein Skript erstellt:
+```sh
+yarn build
+eval $(minikube -p minikube docker-env)
+docker build -t frontend:0 .
+```
+
+Das dazugehörige `Dockerfile` ändert das Standard-Abbild `httpd:2.4-alpine` nur dahingehend ab,
+dass die neue Konfigurationsdatei und die vom Build resultierenden Dateien in das Abbild
+kopiert werden.
+```Dockerfile
+FROM httpd:2.4-alpine
+COPY ./apacheConfiguration/httpd.conf /usr/local/apache2/conf/httpd.conf
+COPY ./build/ /usr/local/apache2/htdocs/
+```
 
 # Frontend
 
-Daniel
+Das React-Frontend wurde großteils aus einer vorherigen Projektarbeit übernommen
+und dahingehend angepasst, dass es mit den veränderten Endpunkten der Timetable- und Booking-API
+kompatibel ist. Als zusätzliche Funktionalität wurde die Buchungsübersichtsseite, nachdem  eine Buchung
+durchgeführt wurde, angepasst, damit diese die neuen Bunchungsinformationen anzeigt. Da sich die API in diesem
+Projekt geändert hat, werden nun nur mehr `RailwayStationIds` und `TrainConnectionIds` anstatt direkt
+der Namen und Codes dieser Informationen übertragen. Daher muss für jede auftretende Id ein weiterer
+Request an die API gesendet werden, um die dazugehörigen Stationennamen bzw. Zugnummern
+ausfindig zu machen. Da für Operationen auf die BookingAPI nun Authentifizierung notwendig ist, wurde diese auch
+dahingehend eingebaut, dass man vom Frontend aus auf die BookingAPI zugreifen kann.
 
 ## OpenAPI-Code-Generator
 
-Daniel
+Da dieses Projekt eine API-Gateway als zentralen Zugriffspunkt für die Timetable- und Booking-API
+verwendet, kann basierend auf der dort befindlichen OpenAPI-Spezifikation der Typescript-Client
+zum Zugreifen auf diese APIs generiert werden. 
+Hierfür wurde die DevDependency `@openapitools/openapi-generator-cli` hinzugefügt,
+welche es erlaubt die angesprochenen Typescript-Clients anhand der OpenAPI-Spezifikation zu generieren.
+
+Um die Generierung zu erleichtern wurden für jede API ein Skript in die Datei `package.json` hinzugefügt,
+das folgende Befehle ausführt:
+```sh
+rm -rf ./src/api/timetable
+openapi-generator generate -i http://192.168.99.100:30272/v3/api-docs/timetable
+                           --generator-name typescript-fetch
+                           -o ./src/api/timetable
+                           --config ./api-docs/timetable.config.json
+cd ./src/api/timetable
+yarn
+```
+Der erste Befehl verwendet den Generator, um einen Client vom Typen `typescript-fetch`
+im Verzeichnis `./src/api/timetable` basierend auf der Konfiguration
+von `./api-docs/timetable.config.json` zu erstellen. Die Konfiguration legt lediglich
+den Namen und die Version des erzeugten NPM-Packages fest.
+Danach wird der befehl `yarn` in dem generierten Verzeichnis ausgeführt,
+um den Package-Manager das generierte Package auf Korrektheit zu überprüfen.
+
+Nun können beide API-Clients verwendet werden:
+```tsx
+import {TimetableApi} from "./api/timetable";
+const timetableApi = new TimetableApi();
+```
 
 ## Authentifizierung
 
-Daniel
+Wie in den früheren Abschnitten schon beschrieben, bietet Okta keine
+konsistente Anleitung zum Implementieren des gewünschten OAuth-Flows in React.
+Daher wurde auf die Methode gesetzt, dass man sich zuvor manuell am Booking-Service
+Authentifizieren muss, wobei der `SESSION`-Cookie für die Überprüfung der Authentifizierung
+gesetzt wird. Wird danach das Frontend verwendet, wird derselbe Cookie mitgesendet, da
+das Frontend denselben Host aufruft, für den das Cookie bestimmt ist.
+
+Die einzige Änderung, die hierfür im API-Client notwendig war, ist das aktivieren der Option,
+dass Cookies mit jedem Request mitgesendet werden:
+```tsx
+const bookingApi = new BookingApi(new Configuration({ credentials: "include" }));
+```
 
 # Ergebnisse
 
