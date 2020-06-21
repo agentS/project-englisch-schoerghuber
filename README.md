@@ -1651,15 +1651,270 @@ Das folgende Quellcodelisting zeigt die wesentlichen Ausschnitte aus dem JSON-Do
 
 ## Infrastruktur-Services
 
-Daniel
+Zum Betreiber der eigentlichen Services werden diverse Infrastruktur-Services benötigt.
+Während der Entwicklung in den früheren Projektaufgaben wurde eine `docker-compose.development.yaml` Datei
+verwendet, die die benötigen Services definiert. Nun werden diese mittels Deskriptoren auch in
+Kubernetes deployt und deren Service-DNS-Names für das Verbinden herangezogen.
+Um während der Entwicklung nicht immer den gesamten Kubernetes-Cluster laufen lassen zu müssen,
+wird die Option die Infrastruktur-Services, wie gewohnt, nur in einer `docker-compose`-Umgebung laufen zu lassen
+verwendet. Die Verbindung zum richtigen Host (Im Kubernetes-Cluster oder über Docker-Compose) wird, wie bereits
+in früheren Abschnitten angesprochen, über verschiedene Versionen der `application.properties`-Dateien gelöst.
 
 ### PostgreSQL
 
-Daniel
+Zur Speicherung aller Zugverbindungen und allen dazugehörigen Informationen benötigt das Timetable-Service
+eine Verbindung zu einer PostgreSQL-Datenbank. Hierfür wird ein Kubenetes-Deployment
+des Abbildes `postgres:10` angelegt, dessen Umgebungsvariablen mittels einer ConfigMap gelesen wird
+und dessen PostgreSQL-Daten in einem definierten persistenten Volume gespeichert werden.
+
+**postgresql-deployment.yaml**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgresql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      name: postgresql-pod
+      labels:
+        app: postgresql
+    spec:
+      containers:
+        - name: postgresql
+          image: postgres:10
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: postgresql-config
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgresqldb
+      volumes:
+        - name: postgresqldb
+          persistentVolumeClaim:
+            claimName: postgresql-persistent-volume-claim
+```
+Die ComfigMap für die Container-Spezifikation beinhaltet lediglich die Zugangsdaten
+zur Datenbank und den Datenbank namen:
+
+**postgresql-configuration.yaml**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-config
+  labels:
+    app: postgresql
+data:
+  POSTGRES_PASSWORD: Cisco0
+  POSTGRES_USER: lukas
+  POSTGRES_DB: timetable
+```
+Die Definition des PersistentVolumes mit dem dazugehörigen PersistentVolumeClaim
+beschreiben ein `1GB` großes Volume, dass an der angegebenen Stelle am Minikube-Cluster
+erzeugt wird.
+
+**postgresql-storage.yaml**
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgresql-persistent-volume
+  labels:
+    type: local
+    app: postgresql
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/data/postgresql"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-persistent-volume-claim
+  labels:
+    app: postgresql
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+Um das Deployment von anderen Services erreichbar zu machen wird eine Service-Definition erstellt,
+die den PostgreSQL-Port `5432` freigibt.
+
+**postgresql-service.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgresql-service
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    app: postgresql
+```
+Durch Einspielen der einzelnen Deskriptoren wird das beschriebene
+PostgreSQL-Service mit allen benötigten Komponenten im Cluster erstellt.
+```sh
+kubectl create -f postgresql-configuration.yaml
+kubectl create -f postgresql-storage.yaml
+kubectl create -f postgresql-deployment.yaml
+kubectl create -f postgresql-service.yaml
+```
+
+Und mittels `kubectl get` kann überprüft werden, dass alle Komponenten erfolgreich erstellt wurden,
+wobei hier nur der fehlerfrei laufende Pod gezeigt wird:
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+postgresql-7d49d95c99-pkkm2   1/1     Running   0          3m43s
+```
 
 ### MongoDB
 
-Daniel
+Das Booking-Service benötigt zur Speicherung von Buchungen nach dem Vorbild
+der Polyglot-Datenhaltung keine PostgrSQL-Datenbank, sondern eine MongoDB.
+Diese wird mit derselben Methode, wie im vorherigen Abschnitt, angelegt, sodass
+diese mit dem Service-DNS-Name innerhalb des Clusters erreichbar ist.
+Hierfür wird ein Deployment des Abbildes `mongo:4.2.7` angelegt, welches wieder die
+benötigten Umgebungsvariablen von einer ConfigMap bekommt und die Daten in einem PersitentVolume
+speichert.
+
+**mongodb-deployment.yaml**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      name: mongodb-pod
+      labels:
+        app: mongodb
+    spec:
+      containers:
+        - name: mongodb
+          image: mongo:4.2.7
+          imagePullPolicy: "IfNotPresent"
+          ports:
+            - containerPort: 27017
+          envFrom:
+            - configMapRef:
+                name: mongodb-config
+          volumeMounts:
+            - mountPath: /data/db
+              name: mongodb-data
+      volumes:
+        - name: mongodb-data
+          persistentVolumeClaim:
+            claimName: mongodb-persistent-volume-claim
+```
+
+Die Konfiguration beinhaltet wieder die Zugangsdaten zur Datenbank und den
+Datenbanknamen.
+**mongodb-configuration.yaml**
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-config
+  labels:
+    app: mongodb
+data:
+  MONGO_INITDB_ROOT_USERNAME: lukas
+  MONGO_INITDB_ROOT_PASSWORD: Cisco0
+  MONGO_INITDB_DATABASE: booking
+```
+
+Die Daten werden in einem PersistentVolume mit dazugehörigem Claim
+persistiert, welches wieder am definierten Pfad im Dateisystem von Minikube
+liegt und `1GB` an größe besitzt.
+
+**mongodb-storage.yaml**
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-persistent-volume
+  labels:
+    type: local
+    app: mongodb
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/mnt/data/mongodb"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-persistent-volume-claim
+  labels:
+    app: mongodb
+spec:
+  storageClassName: manual
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+Um die Datenbank als Service innerhalb des Clusters erreichbar zu machen wird
+eine Service-Definition erstellt, die den Port `27017` freigibt.
+
+**mongodb-service.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+spec:
+  ports:
+    - port: 27017
+      targetPort: 27017
+  selector:
+    app: mongodb
+```
+
+Durch Einspielen der einzelnen Deskriptoren wird das beschriebene
+MongoDB-Service mit allen benötigten Komponenten im Cluster erstellt.
+```sh
+kubectl create -f mongodb-configuration.yaml
+kubectl create -f mongodb-storage.yaml
+kubectl create -f mongodb-deployment.yaml
+kubectl create -f mongodb-service.yaml
+```
+
+Und mittels `kubectl get` kann überprüft werden, dass alle Komponenten erfolgreich erstellt wurden,
+wobei hier nur der fehlerfrei laufende Pod gezeigt wird:
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+mongodb-66b897c589-rrlwj      1/1     Running   0          3m46s
+```
 
 ### RabbitMQ
 
