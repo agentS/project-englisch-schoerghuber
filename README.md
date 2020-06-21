@@ -2286,7 +2286,7 @@ authentifiziert wurde.
 
 ![Frontend-Book-Ticket](doc/frontend/book_ticket.png)
 
-Nun wird die Buchungs-Überischts-Seite geöffnet, die die Zusammenfassung über alle
+Nun wird die Buchungs-Übersichts-Seite geöffnet, die die Zusammenfassung über alle
 Buchungsinformationen und den Status der Buchung zeigt.
 
 ![Frontend-Book-Ticket](doc/frontend/booking_result.png)
@@ -2294,9 +2294,22 @@ Buchungsinformationen und den Status der Buchung zeigt.
 Man sieht zunächst allgemeine Informationen wie Start- und Zielbahnhof, 
 Abreisedatum, Wagontyp und den Status des Tickets. Dieser kann entweder bestätigt, abgelehnt oder
 reserviert sein. Danach werden alle Tickets angezeigt und deren Details. Für
-jedesmal umsteigen wird ein neues Ticket generiert. Das URL dieser Übersicht
+jedesmal umsteigen wird ein neues Ticket generiert. Der URL dieser Übersicht
 kann bei Fall einer nicht erfolgreichen Buchung, also bei nur einer Reservierung,
 zu einem späteren Zeitpunkt erneut aufgerufen werden, um den geänderten Status zu beobachten.
+
+Ist das Timetable-Service zum Zeitpunkt der Buchung nicht erreichbar, wird der
+Status der Reservierung auf `RESERVED` gesetzt. Dies kann erreicht werden, indem das
+Timetable-Service über den Befehl `kubectl delete svc timetable` in Kubernetes
+deaktiviert wird bevor die Buchung abgesetzt wird.
+
+IMAGE_OF_RESERVED_BOOKING
+
+Wie im obigen Foto zu sehen ist, ist der Status `RESERVED`. Wird nun der Timetable-Service
+hochgefahren mit `kubectl apply -f timetable/target/kubernetes/minikube.json` und ein paar Sekunden gewartet
+sieht man, nach dem Aktualisieren der Seite, dass sich der Status in `CONFIRMED` geändert hat.
+
+IMAGE_OF_CONFIRMED_BOOKING
 
 Wird ein ungültiger URL eingeben wird eine entsprechende Fehlermeldung angezeigt:
 ![Frontend-Book-Ticket-Not-Found](doc/frontend/booking_not_found.png)
