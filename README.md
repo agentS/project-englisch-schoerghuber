@@ -1669,6 +1669,10 @@ Daniel
 
 Daniel
 
+### Apache für SPA
+
+Daniel
+
 # Frontend
 
 Daniel
@@ -1723,4 +1727,12 @@ Schlägt ein Aufruf fehl, weil z.B. der Timetable-Service nicht erreichbar ist, 
 Hier ist ersichtlich, dass der Aufruf des Timetable-Services durch den Booking-Service fehl schlägt.
 Daher wird die Buchung nur reserviert und nicht direkt bestätigt.
 
-![Tracing-Ausgabe einer erfolgreichen Buchung](doc/tracing/tracingReservedBooking.png)
+![Tracing-Ausgabe einer reservierten Buchung](doc/tracing/tracingReservedBooking.png)
+
+Ist das Timetable-Service wieder erreichbar, können die Booking-Service-Instanzen in regelmäßigen Abständen prüfen, ob reservierte Buchungen zu bestätigen oder abzulehnen sind.
+In dem unteren Bild ist ein Fall zu sehen, in dem ein Booking-Service ein noch offenes Ticket mit zwei Umstiegen (von Amstetten nach Berlin Hauptbahnhof) bestätigt.
+Der erste Request an den Timetable-Service dient zur Abfrage der Route mit Umstiegen und die letzten beiden Requests dienen zur Ermittlung der Wagons auf den jeweiligen Teilstrecken.
+Ebenfalls erkennbar ist, dass das Tracing auch die periodisch aufgerufene Methode `updateBookingStatuses` des Booking-Service umfasst.
+Weiters ist der Gateway-Service an den Operationen nicht beteiligt, da die durchgeführten Operationen vom System und nicht von den Clients angestoßen werden.
+
+![Tracing-Ausgabe der Bestätigung einer Buchung](doc/tracing/tracingConfirmationOfReservedBookings.png)
