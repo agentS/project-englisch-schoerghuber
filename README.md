@@ -2270,11 +2270,37 @@ const bookingApi = new BookingApi(new Configuration({ credentials: "include" }))
 
 ## Frontend
 
-Daniel
+Nach der Anpassung des React-Frontends sind alle Funktionen mit der neue API-Spezifikation
+kompatibel. Ruft man das Frontend auf, wird die Verbindungssuch-Seite angezeigt auf der
+man die Start- und Zielstation mittels Autocomplete-Feld eingeben kann. Die Daten kommen
+hierbei vom TimeTable-Service.
+
+![Frontend-Search-Connection](doc/frontend/search_connection.png)
+
+Nach Drücken des Such-Buttons wird eine passende Verbindung gesucht und es kann
+der Tag der Reise und die Art des Wagons geändert werden. Ist man zufrieden
+mit der Auswahl kann die Buchung getätigt werden. Voraussetzung ist hierber, 
+dass man bereits über den Endpunkt der API-Gateway `/booking/booking/asdf` (`asdf` kann durch eine beliebigen anderen String ersetzt werden)
+authentifiziert wurde.
+
+![Frontend-Book-Ticket](doc/frontend/book_ticket.png)
+
+Nun wird die Buchungs-Überischts-Seite geöffnet, die die Zusammenfassung über alle
+Buchungsinformationen und den Status der Buchung zeigt.
+
+![Frontend-Book-Ticket](doc/frontend/booking_result.png)
+
+Man sieht zunächst allgemeine Informationen wie Start- und Zielbahnhof, 
+Abreisedatum, Wagontyp und den Status des Tickets. Dieser kann entweder bestätigt, abgelehnt oder
+reserviert sein. Danach werden alle Tickets angezeigt und deren Details. Für
+jedesmal umsteigen wird ein neues Ticket generiert. Das URL dieser Übersicht
+kann bei Fall einer nicht erfolgreichen Buchung, also bei nur einer Reservierung,
+zu einem späteren Zeitpunkt erneut aufgerufen werden, um den geänderten Status zu beobachten.
+
+Wird ein ungültiger URL eingeben wird eine entsprechende Fehlermeldung angezeigt:
+![Frontend-Book-Ticket-Not-Found](doc/frontend/booking_not_found.png)
 
 ## Notifications
-
-Lukas
 
 Das Notification-Service schickt bei Änderungen des Buchungsstatus Update-E-Mails aus.
 In der E-Mail befindet sich ein Link, mit der auf die Frontend-Webseite mit dem Ticket zugegriffen werden kann.
