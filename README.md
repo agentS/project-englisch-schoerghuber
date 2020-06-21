@@ -2146,6 +2146,67 @@ COPY ./apacheConfiguration/httpd.conf /usr/local/apache2/conf/httpd.conf
 COPY ./build/ /usr/local/apache2/htdocs/
 ```
 
+Um das Frontend nun im Kubernetes-Cluster laufen zu lassen wurde ein Deployment-Deskriptor erstellt,
+der das erzeugte Abbild laufen lässt.
+
+**frontend-deployment.yaml**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: frontend:0
+        imagePullPolicy: "IfNotPresent"
+        ports:
+        - containerPort: 80
+          protocol: TCP
+          name: http
+```
+Damit dieses Deployment von außen erreicht werden kann wurde ein NodePortService erstellt,
+der den internen Port `80` auf den externen Port `30800` abbildet.
+
+**frontend-node-port-service.yaml**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+  - port: 8080
+    targetPort: 80
+    nodePort: 30800
+```
+
+Durch Einspielen der einzelnen Deskriptoren wird das beschriebene
+Service mit allen benötigten Komponenten im Cluster erstellt.
+```sh
+kubectl create -f frontend-deployment.yaml
+kubectl create -f frontend-node-port-service.yaml
+```
+
+Und mittels `kubectl get` kann überprüft werden, dass alle Komponenten erfolgreich erstellt wurden,
+wobei hier nur der fehlerfrei laufende Pod gezeigt wird:
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+frontend-7d5c96b4b4-bfzjd     1/1     Running   0          38s
+```
+
 # Frontend
 
 Das React-Frontend wurde großteils aus einer vorherigen Projektarbeit übernommen
