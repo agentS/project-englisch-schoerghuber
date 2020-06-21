@@ -33,4 +33,6 @@ opentracing:
       port: 6831
 
 cors:
-  origin: "http://localhost:3000"
+  origins:
+    webFrontend: "http://192.168.99.100:30800"
+    swaggerUI: "http://192.168.99.100:30272"

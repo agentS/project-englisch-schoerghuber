@@ -7,7 +7,7 @@
 ###
 
 # Extend vert.x image
-FROM adoptopenjdk/openjdk11:alpine
+FROM adoptopenjdk/openjdk11:alpine-jre
 
 ENV VERTICLE_FILE ./target/notification-0-fat.jar
 ENV CONFIGURATION_FILE_NAME ./configuration-kubernetes.json

@@ -1,0 +1,29 @@
+@startuml
+class Booking {
+	- id: String
+	- departureStationId: Long
+	- arrivalStationId: Long
+	- departureDate: LocalDate
+	- trainCarType: TrainCarType
+	- emailAddress: String
+	- status: BookingStatus
+}
+
+class Ticket {
+	- originStationId: Long
+	- destinationStationId: Long
+	- trainCarId: Long
+	- placeNumber: Integer
+	- departureDate: LocalDate
+	- trainConnectionId: Long
+	- departureStationIds: Set<Long>
+}
+
+enum BookingStatus {
+    RESERVED
+    CONFIRMED
+    REJECTED
+}
+
+Booking "1" *-- "*" Ticket
+@enduml

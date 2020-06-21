@@ -2,6 +2,7 @@
   "name": "night_train_frontend",
   "version": "0.1.0",
   "private": true,
+  "homepage": "http://192.168.99.100:30800/",
   "dependencies": {
     "@testing-library/jest-dom": "^5.10.1",
     "@testing-library/react": "^10.2.1",
@@ -27,8 +28,8 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "gen-timetable-api": "rm -rf ./src/api/timetable && openapi-generator generate -i http://localhost:8081/v3/api-docs/timetable --generator-name typescript-fetch -o ./src/api/timetable --config ./api-docs/timetable.config.json && cd ./src/api/timetable && yarn",
-    "gen-booking-api": "rm -rf ./src/api/booking && openapi-generator generate -i http://localhost:8081/v3/api-docs/booking --generator-name typescript-fetch -o ./src/api/booking --config ./api-docs/booking.config.json && cd ./src/api/booking && yarn"
+    "gen-timetable-api": "rm -rf ./src/api/timetable && openapi-generator generate -i http://192.168.99.100:30272/v3/api-docs/timetable --generator-name typescript-fetch -o ./src/api/timetable --config ./api-docs/timetable.config.json && cd ./src/api/timetable && yarn",
+    "gen-booking-api": "rm -rf ./src/api/booking && openapi-generator generate -i http://192.168.99.100:30272/v3/api-docs/booking --generator-name typescript-fetch -o ./src/api/booking --config ./api-docs/booking.config.json && cd ./src/api/booking && yarn"
   },
   "eslintConfig": {
     "extends": "react-app"

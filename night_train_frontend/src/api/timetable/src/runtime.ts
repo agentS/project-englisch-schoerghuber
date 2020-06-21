@@ -13,7 +13,7 @@
  */
 
 
-export const BASE_PATH = "http://localhost:8081/timetable".replace(/\/+$/, "");
+export const BASE_PATH = "http://192.168.99.100:30272/timetable".replace(/\/+$/, "");
 
 const isBlob = (value: any) => typeof Blob !== 'undefined' && value instanceof Blob;
 

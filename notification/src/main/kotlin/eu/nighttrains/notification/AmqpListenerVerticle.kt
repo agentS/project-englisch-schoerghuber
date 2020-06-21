@@ -7,12 +7,15 @@ import io.vertx.rabbitmq.RabbitMQClient
 import io.vertx.rabbitmq.RabbitMQOptions
 
 class AmqpListenerVerticle : AbstractVerticle() {
+	private var webFrontendBaseUrl: String? = null
+
 	override fun start(startPromise: Promise<Void>) {
 		val amqpConfiguration = RabbitMQOptions()
 		amqpConfiguration.host = this.config().getString("host")
 		amqpConfiguration.port = this.config().getInteger("port")
 		amqpConfiguration.user = this.config().getString("username")
 		amqpConfiguration.password = this.config().getString("password")
+		this.webFrontendBaseUrl = this.config().getString("webFrontendBaseUrl")
 
 		val client = RabbitMQClient.create(this.vertx, amqpConfiguration)
 		client.start { clientStartResult ->
@@ -91,20 +94,20 @@ class AmqpListenerVerticle : AbstractVerticle() {
 		EmailRequest(
 			amqpMessage.getString("emailAddress"),
 			"Confirmation of your booking ${amqpMessage.getString("id")}",
-			"Your booking from ${amqpMessage.getString("id")} has been confirmed."
+			"Your <a href=\"$webFrontendBaseUrl/booking/${amqpMessage.getString("id")}\">booking ${amqpMessage.getString("id")}</a> has been confirmed."
 		)
 
 	private fun convertReservationMessageToEmailRequest(amqpMessage: JsonObject): EmailRequest =
 		EmailRequest(
 			amqpMessage.getString("emailAddress"),
 			"Reservation of your booking ${amqpMessage.getString("id")} pending",
-			"Unfortunately we are having troubles on our side processing your request and therefore your booking ${amqpMessage.getString("id")} can not be confirmed yet. We will notify you as soon as we can confirm the booking."
+			"Unfortunately we are having troubles on our side processing your request and therefore your <a href=\"$webFrontendBaseUrl/booking/${amqpMessage.getString("id")}\">booking ${amqpMessage.getString("id")}</a> can not be confirmed yet. We will notify you as soon as we can confirm the booking."
 		)
 
 	private fun convertRejectionMessageToEmailRequest(amqpMessage: JsonObject): EmailRequest =
 		EmailRequest(
 			amqpMessage.getString("emailAddress"),
 			"Rejection of your booking ${amqpMessage.getString("id")}",
-			"Unfortunately one ore more trains for your reservation ${amqpMessage.getString("id")} are overbooked. Thus we have to reject your booking request. We apologize for the inconvenience."
+			"Unfortunately one ore more trains for your <a href=\"$webFrontendBaseUrl/booking/${amqpMessage.getString("id")}\">reservation ${amqpMessage.getString("id")}</a> are overbooked. Thus we have to reject your booking request. We apologize for the inconvenience."
 		)
 }

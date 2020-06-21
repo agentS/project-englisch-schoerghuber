@@ -43,15 +43,12 @@ class MailSenderVerticle : AbstractVerticle() {
 		message.from = this.config().getString("fromAddress")
 		message.to = listOf(emailRequest.getString("recipientAddress"))
 		message.subject = emailRequest.getString("subject")
-		message.text = emailRequest.getString("text")
-		println("sending email")
-		println(this.mailClient)
+		message.html = emailRequest.getString("text")
 		this.mailClient?.sendMail(message) { mailTransmissionResult ->
 			if (mailTransmissionResult.succeeded()) {
-				println("sent email")
 				emailRequestMessage.reply(RESPONSE_CODE_EMAIL_REQUEST_SENT)
 			} else {
-				print(mailTransmissionResult.cause())
+				println(mailTransmissionResult.cause())
 				emailRequestMessage.fail(
 					ERROR_CODE_EMAIL_REQUEST_FAILED,
 					mailTransmissionResult.cause().message

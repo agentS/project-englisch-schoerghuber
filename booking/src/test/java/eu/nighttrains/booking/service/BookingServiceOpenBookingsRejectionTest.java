@@ -3,6 +3,7 @@ package eu.nighttrains.booking.service;
 import eu.nighttrains.booking.dto.BookingDto;
 import eu.nighttrains.booking.model.BookingStatus;
 import eu.nighttrains.booking.service.config.CircuitBreakerTestConfig;
+import eu.nighttrains.booking.service.config.RabbitMqMockConfig;
 import eu.nighttrains.booking.service.rest.TimeTableRestClientFeign;
 import eu.nighttrains.timetable.model.TrainCarType;
 import org.junit.jupiter.api.Test;
@@ -18,10 +19,9 @@ import org.springframework.context.annotation.Import;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest
-@Import(CircuitBreakerTestConfig.class)
+@Import({CircuitBreakerTestConfig.class, RabbitMqMockConfig.class})
 public class BookingServiceOpenBookingsRejectionTest {
 	private static final int SLEEPER_CARS_MAXIMUM_CAPACITY = 40;
 

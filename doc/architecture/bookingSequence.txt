@@ -1,0 +1,28 @@
+@startuml
+actor User
+participant Gateway
+participant Timetable
+participant Booking
+
+User -> Gateway: Find connections between stations
+Gateway -> Timetable: Find connections between stations
+Gateway <-- Timetable: Connections between stations
+User <-- Gateway: Connections between stations
+
+User -> Gateway: Booking request
+Gateway -> Booking: Booking request
+
+Booking -> Timetable: Fetch train connections
+Timetable <-- Booking: Train connections
+
+
+loop for every single hop
+	Booking -> Timetable: Fetch train cars for single hop
+	Timetable <-- Booking: Train cars for single hop
+	Booking -> Booking: Check if place is available
+end
+
+Gateway <-- Booking: Booking reply
+User <-- Gateway: Booking reply
+
+@enduml
